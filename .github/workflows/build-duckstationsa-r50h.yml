@@ -1,0 +1,40 @@
+name: Build DuckStation Standalone (aarch64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-duckstationsa-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build DuckStation in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
+                libzip-dev liblzma-dev
+              ./builds.sh duckstationsa
+            "
+
+      - name: Upload built DuckStation binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: duckstationsa-r50h-build
+          path: |
+            duckstationsa-64/duckstation-nogui
+            duckstationsa-64/duckstationsa_pkg_*.tar.gz
