@@ -1,0 +1,44 @@
+name: Build SDL2 (rotated) for R50H
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-sdl2-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build SDL2 in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libasound2-dev libpulse-dev libsamplerate0-dev \
+                libudev-dev libevdev-dev zlib1g-dev
+              mkdir -p /usr/include/rga
+              cp vendor/rga/include/*.h /usr/include/rga/
+              cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
+              ldconfig
+              ./builds.sh sdl2
+            "
+
+      - name: Upload built SDL2 binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdl2-r50h-build
+          path: |
+            sdl2-64/libSDL2-2.0.so.0.3200.10
+            sdl2-64/libSDL2-2.0.so.0.3200.10.rotated
