@@ -1,0 +1,57 @@
+name: Build RetroArch32 (rot + unrot) for R50H
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-retroarch-armhf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+
+      - name: Build RetroArch in armhf Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm/v7 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libasound2-dev libfreetype6-dev libudev-dev zlib1g-dev
+
+              ln -s /usr/include/libdrm/ /usr/include/drm
+              mv /usr/bin/gcc /usr/bin/gcc.real
+              printf '#!/bin/sh\nexec /usr/bin/gcc.real -Wno-implicit-function-declaration \"\$@\"\n' > /usr/bin/gcc
+              chmod +x /usr/bin/gcc
+
+              mkdir -p /usr/include/rga /usr/include/go2
+              cp vendor/rga/include/*.h /usr/include/rga/
+              cp vendor/rga/lib32/librga.so* /usr/lib/arm-linux-gnueabihf/
+              cp vendor/go2/lib32/libgo2.so /usr/lib/arm-linux-gnueabihf/
+              ldconfig
+
+              git clone https://github.com/OtherCrashOverride/libgo2.git
+              cp libgo2/src/*.h /usr/include/go2/
+
+              ./builds.sh retroarch
+            "
+
+      - name: Debug - list build output
+        run: find . -iname "retroarch.rk3326.*"
+
+      - name: Upload built RetroArch32 binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: retroarch32-r50h-build
+          path: |
+            retroarch32/retroarch.rk3326.rot
+            retroarch32/retroarch.rk3326.unrot
