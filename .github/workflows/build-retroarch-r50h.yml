@@ -29,7 +29,9 @@ jobs:
                 libasound2-dev libfreetype6-dev libudev-dev zlib1g-dev
 
               ln -s /usr/include/libdrm/ /usr/include/drm
-
+              mv /usr/bin/gcc /usr/bin/gcc.real
+              printf '#!/bin/sh\nexec /usr/bin/gcc.real -Wno-implicit-function-declaration \"\$@\"\n' > /usr/bin/gcc
+              chmod +x /usr/bin/gcc
               mkdir -p /usr/include/rga /usr/include/go2
               cp vendor/rga/include/*.h /usr/include/rga/
               cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
