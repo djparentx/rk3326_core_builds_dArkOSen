@@ -16,8 +16,8 @@ diff -rupN SDL2.orig/src/video/kmsdrm/SDL_kmsdrmmouse.c SDL2/src/video/kmsdrm/SD
 -        src_row = &((uint8_t *)curdata->buffer)[i * curdata->w * 4];
 -        SDL_memcpy(ready_buffer + (i * bo_stride), src_row, (size_t)4 * curdata->w);
 +        for (j = 0; j < curdata->w; j++) {
-+            src_row = ((uint32_t*)curdata->buffer)[i * curdata->w + j];
-+            SDL_memcpy(ready_buffer + ((curdata->w - j + 1) * bo_stride) + i, &src_row, 4);
++            uint32_t src_pixel = ((uint32_t*)curdata->buffer)[i * curdata->w + j];
++            SDL_memcpy(ready_buffer + ((curdata->w - j + 1) * bo_stride) + i, &src_pixel, 4);
 +        }
      }
  
