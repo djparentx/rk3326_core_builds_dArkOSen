@@ -28,7 +28,7 @@ jobs:
                 libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
                 libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
                 libzip-dev liblzma-dev
-              export CXXFLAGS='-include cstdarg'
+              export CXXFLAGS='-include cstdarg -include cstdio'
               ./builds.sh duckstationsa
             "
 
