@@ -53,5 +53,5 @@ jobs:
         with:
           name: retroarch32-r50h-build
           path: |
-            retroarch32/retroarch.rk3326.rot
-            retroarch32/retroarch.rk3326.unrot
+            retroarch32/retroarch32.rk3326.rot
+            retroarch32/retroarch32.rk3326.unrot
