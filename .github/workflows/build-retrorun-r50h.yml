@@ -26,7 +26,7 @@ jobs:
               apt-get update
               apt-get install -y build-essential g++-14 git cmake pkg-config \
                 libsdl2-dev libpng-dev libdrm-dev libgbm-dev \
-                libegl1-mesa-dev libgles2-mesa-dev libopenal-dev zlib1g-dev
+                libegl1-mesa-dev libgles2-mesa-dev libopenal-dev libevdev-dev zlib1g-dev
 
               mkdir -p /usr/include/rga /usr/include/go2
               cp vendor/rga/include/*.h /usr/include/rga/
@@ -69,7 +69,7 @@ jobs:
               apt-get update
               apt-get install -y build-essential g++-14 git cmake pkg-config \
                 libsdl2-dev libpng-dev libdrm-dev libgbm-dev \
-                libegl1-mesa-dev libgles2-mesa-dev libopenal-dev zlib1g-dev
+                libegl1-mesa-dev libgles2-mesa-dev libopenal-dev libevdev-dev zlib1g-dev
 
               mkdir -p /usr/include/rga /usr/include/go2
               cp vendor/rga/include/*.h /usr/include/rga/
