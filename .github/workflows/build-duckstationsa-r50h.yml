@@ -30,8 +30,8 @@ jobs:
                 libzip-dev liblzma-dev
               export CXXFLAGS='-include cstdarg -include cstdio'
               dpkg -l | grep -E 'libgbm|libwayland|libsdl2' || true
-              nm -D /usr/lib/aarch64-linux-gnu/libgbm.so.1 | grep -i modifier || echo "NO MODIFIER SYMS IN LIBGBM"
-              nm -D /usr/lib/aarch64-linux-gnu/libwayland-egl.so.1 2>&1 | head -5 || echo "LIBWAYLAND-EGL MISSING"
+              nm -D /usr/lib/aarch64-linux-gnu/libgbm.so.1 | grep -i modifier || echo 'NO MODIFIER SYMS IN LIBGBM'
+              nm -D /usr/lib/aarch64-linux-gnu/libwayland-egl.so.1 2>&1 | head -5 || echo 'LIBWAYLAND-EGL MISSING'
               ./builds.sh duckstationsa
             "
 
