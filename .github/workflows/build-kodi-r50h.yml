@@ -29,7 +29,7 @@ jobs:
                 libudev-dev zlib1g-dev libssl-dev uuid-dev \
                 libavahi-client-dev libavahi-common-dev libbluetooth-dev \
                 libbz2-dev libcap-dev libcdio-dev libcurl4-openssl-dev \
-                libcwiid-dev libdbus-1-dev libfmt-dev libflac-dev \
+                libcwiid-dev libdbus-1-dev libfmt-dev libflac-dev libgif-dev \
                 libfontconfig-dev libfreetype-dev libfribidi-dev \
                 libfstrcmp-dev libgcrypt20-dev libgnutls28-dev \
                 libgpg-error-dev libjpeg-dev liblcms2-dev libltdl-dev \
