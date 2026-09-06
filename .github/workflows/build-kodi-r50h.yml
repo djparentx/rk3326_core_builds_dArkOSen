@@ -1,0 +1,55 @@
+name: Build Kodi (rotated) for R50H
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-kodi-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build Kodi in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libudev-dev zlib1g-dev libssl-dev uuid-dev \
+                libavahi-client-dev libavahi-common-dev libbluetooth-dev \
+                libbz2-dev libcap-dev libcdio-dev libcurl4-openssl-dev \
+                libcwiid-dev libdbus-1-dev libfmt-dev libflac-dev \
+                libfontconfig-dev libfreetype-dev libfribidi-dev \
+                libfstrcmp-dev libgcrypt20-dev libgnutls28-dev \
+                libgpg-error-dev libjpeg-dev liblcms2-dev libltdl-dev \
+                liblzo2-dev libmicrohttpd-dev libnfs-dev libogg-dev \
+                libpcre2-dev libplist-dev libpng-dev libpugixml-dev \
+                libsmbclient-dev libspdlog-dev libsqlite3-dev libtag1-dev \
+                libtinyxml-dev libtinyxml2-dev libunistring-dev libva-dev \
+                libxml2-dev libxslt1-dev libyajl-dev nasm rapidjson-dev \
+                swig uuid-dev zip
+              mkdir -p /usr/include/rga
+              cp vendor/rga/include/*.h /usr/include/rga/
+              cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
+              ldconfig
+              ./builds.sh kodi
+            "
+
+      - name: Upload built Kodi binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: kodi-r50h-build
+          path: |
+            kodi-64/kodi-gbm.unrot
+            kodi-64/kodi-gbm.rot
