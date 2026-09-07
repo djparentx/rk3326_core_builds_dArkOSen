@@ -1,15 +1,16 @@
 --- a/src/globals.h
 +++ b/src/globals.h
-@@ -191,6 +191,7 @@
- bool isRG353V();
- bool isRG353M();
+@@ -192,6 +192,7 @@
+ bool isRG351V();
+ bool isRG351MP();
  bool isRG552();
 +bool isR50H();
- bool hasDeviceRotatedScreen();
+ bool isRG503();
+ bool isRG353V();
+ bool isRG353M();
 --- a/src/globals.cpp
 +++ b/src/globals.cpp
-@@ -400,6 +400,10 @@
- bool isRG552()
+@@ -404,6 +404,10 @@
  {
      return checkDeviceName((char *)"RG552"); 
  }
@@ -17,10 +18,13 @@
 +{
 +    return checkDeviceName((char *)"R50H");
 +}
- bool hasDeviceRotatedScreen(){
+ bool isRG503()
+ {
+     return checkDeviceName((char *)"RG503"); 
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -150,7 +150,7 @@
+ 
      if (!gpio_joypad)
      {
 -        if (isRG351MP() || isRG552())
