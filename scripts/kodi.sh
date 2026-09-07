@@ -59,6 +59,7 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr \
       -DENABLE_VAAPI=OFF \
       -DENABLE_VDPAU=OFF \
       -DENABLE_INTERNAL_FFMPEG=ON \
+      -DENABLE_INTERNAL_PCRE=ON \
       ..
 
 if [[ $? != "0" ]]; then
@@ -112,6 +113,7 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr \
       -DENABLE_VAAPI=OFF \
       -DENABLE_VDPAU=OFF \
       -DENABLE_INTERNAL_FFMPEG=ON \
+      -DENABLE_INTERNAL_PCRE=ON \
       ..
 
 if [[ $? != "0" ]]; then
