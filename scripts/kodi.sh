@@ -54,12 +54,11 @@ cd build-unrot
 cmake -DCMAKE_INSTALL_PREFIX=/usr \
       -DCORE_PLATFORM_NAME=gbm \
       -DAPP_RENDER_SYSTEM=gles \
-      -DENABLE_X11=OFF \
-      -DENABLE_WAYLAND=OFF \
       -DENABLE_VAAPI=OFF \
       -DENABLE_VDPAU=OFF \
       -DENABLE_INTERNAL_FFMPEG=ON \
       -DENABLE_INTERNAL_PCRE=ON \
+      -DENABLE_TESTING=OFF \
       ..
 
 if [[ $? != "0" ]]; then
@@ -108,12 +107,11 @@ cd build-rot
 cmake -DCMAKE_INSTALL_PREFIX=/usr \
       -DCORE_PLATFORM_NAME=gbm \
       -DAPP_RENDER_SYSTEM=gles \
-      -DENABLE_X11=OFF \
-      -DENABLE_WAYLAND=OFF \
       -DENABLE_VAAPI=OFF \
       -DENABLE_VDPAU=OFF \
       -DENABLE_INTERNAL_FFMPEG=ON \
       -DENABLE_INTERNAL_PCRE=ON \
+      -DENABLE_TESTING=OFF \
       ..
 
 if [[ $? != "0" ]]; then
