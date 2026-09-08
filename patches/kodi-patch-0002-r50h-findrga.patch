@@ -1,0 +1,50 @@
+From 0fd452abc452b6773c8aa62c0c7f9c92935040e6 Mon Sep 17 00:00:00 2001
+From: djparentx <276067176+djparentx@users.noreply.github.com>
+Date: Sun, 6 Sep 2026 12:30:14 -0600
+Subject: [PATCH] Add Kodi module Fingra.cmake
+
+---
+ cmake/modules/Findrga.cmake | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+ create mode 100644 cmake/modules/Findrga.cmake
+
+diff --git a/cmake/modules/Findrga.cmake b/cmake/modules/Findrga.cmake
+new file mode 100644
+index 0000000000..16f068e7ac
+--- /dev/null
++++ b/cmake/modules/Findrga.cmake
+@@ -0,0 +1,31 @@
++# Findrga
++# ----------
++# Finds the RGA library
++#
++# This will define the following target:
++#
++#   RGA::RGA   - The RGA library
++
++if(NOT TARGET RGA::RGA)
++  find_package(PkgConfig)
++  if(PKG_CONFIG_FOUND)
++    pkg_check_modules(PC_RGA librga QUIET)
++  endif()
++
++  find_path(RGA_INCLUDE_DIR NAMES rga/RgaApi.h
++                            HINTS ${PC_RGA_INCLUDEDIR})
++  find_library(RGA_LIBRARY NAMES rga
++                           HINTS ${PC_RGA_LIBDIR})
++
++  include(FindPackageHandleStandardArgs)
++  find_package_handle_standard_args(rga
++                                    REQUIRED_VARS RGA_LIBRARY RGA_INCLUDE_DIR)
++
++  if(RGA_FOUND)
++    add_library(RGA::RGA UNKNOWN IMPORTED)
++    set_target_properties(RGA::RGA PROPERTIES
++                                   IMPORTED_LOCATION "${RGA_LIBRARY}"
++                                   INTERFACE_INCLUDE_DIRECTORIES "${RGA_INCLUDE_DIR}")
++    set_property(GLOBAL APPEND PROPERTY INTERNAL_DEPS_PROP RGA::RGA)
++  endif()
++endif()
+-- 
+2.43.0
+
