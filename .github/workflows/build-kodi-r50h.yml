@@ -38,7 +38,7 @@ jobs:
                   libtinyxml-dev libtinyxml2-dev libtool libudev-dev libunistring-dev \
                   libva-dev libvorbis-dev libxslt1-dev nasm python3-dev python3-pil \
                   rapidjson-dev swig unzip uuid-dev zip zlib1g-dev \
-                  libflatbuffers-dev libgbm-dev libinput-dev libxkbcommon-dev
+                  libflatbuffers-dev libgbm-dev libinput-dev libxkbcommon-dev libdisplay-info-dev
               mkdir -p /usr/include/rga
               cp vendor/rga/include/*.h /usr/include/rga/
               cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
