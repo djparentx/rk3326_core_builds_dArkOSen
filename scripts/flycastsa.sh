@@ -24,6 +24,8 @@ TAG="v2.6"
 		  exit 1
 		 fi
 		cp patches/flycastsa-patch* flycast/.
+		cp mali/shims/gbm_shim.c flycast/.
+		cp mali/shims/wayland_egl_shim.c flycast/.
 	  fi
 
 	 cd flycast/
