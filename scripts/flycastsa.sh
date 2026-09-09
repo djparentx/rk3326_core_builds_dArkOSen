@@ -65,8 +65,10 @@ TAG="v2.6"
 
 	    if [[ "$sdlmode" == "rot" ]]; then
 	      hostsdlflag="-DUSE_HOST_SDL=ON"
+	      shimflag="-DFLYCAST_LINK_MALI_SHIMS=ON"
 	    else
 	      hostsdlflag="-DUSE_HOST_SDL=OFF"
+	      shimflag="-DFLYCAST_LINK_MALI_SHIMS=OFF"
 	    fi
 
 	    cmake -S ../flycast \
@@ -81,7 +83,7 @@ TAG="v2.6"
 	      -DUSE_PULSEAUDIO=OFF \
 	      -DUSE_OPENMP=ON \
 	      -DUSE_VULKAN=OFF \
-	      -DUSE_GLES=ON ${hostsdlflag} -B .
+	      -DUSE_GLES=ON ${hostsdlflag} ${shimflag} -B .
 
 	    make -j$(nproc)
 

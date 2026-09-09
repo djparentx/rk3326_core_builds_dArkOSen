@@ -4,10 +4,12 @@
  	add_executable(${PROJECT_NAME} MACOSX_BUNDLE core/emulator.cpp)
  else()
  	add_executable(${PROJECT_NAME} core/emulator.cpp)
-+	target_sources(${PROJECT_NAME} PRIVATE
-+		gbm_shim.c
-+		wayland_egl_shim.c
-+	)
++	if(FLYCAST_LINK_MALI_SHIMS)
++		target_sources(${PROJECT_NAME} PRIVATE
++			gbm_shim.c
++			wayland_egl_shim.c
++		)
++	endif()
  endif()
  
  set_target_properties(${PROJECT_NAME} PROPERTIES
