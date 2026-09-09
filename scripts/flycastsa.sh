@@ -17,7 +17,7 @@ TAG="v2.6"
 	if [[ "$var" == "flycastsa" || "$var" == "all" ]] && [[ "$bitness" == "64" ]]; then
 	 cd $cur_wd
 	  if [ ! -d "flycast/" ]; then
-		git clone https://github.com/flyinghead/flycast.git
+		git clone --depth 1 --branch ${TAG} https://github.com/flyinghead/flycast.git
 		if [[ $? != "0" ]]; then
 		  echo " "
 		  echo "There was an error while cloning the flycast standalone git.  Is Internet active or did the git location change?  Stopping here."
@@ -30,7 +30,7 @@ TAG="v2.6"
 
 	 cd flycast/
 	 git checkout ${TAG}
-	 git submodule update --init
+	 git submodule update --init --depth 1
 	 sed -i 's/\-O[23]/-Ofast/' CMakeLists.txt
 	 
 	 flycastsa_patches=$(find *.patch)
@@ -75,6 +75,8 @@ TAG="v2.6"
 	      -DCMAKE_BUILD_TYPE="Release" \
 	      -DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 	      -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG" \
+	      -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+	      -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 	      -DWITH_SYSTEM_ZLIB=ON \
 	      -DUSE_PULSEAUDIO=OFF \
 	      -DUSE_OPENMP=ON \
