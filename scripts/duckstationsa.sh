@@ -26,8 +26,6 @@ bitness="$(getconf LONG_BIT)"
 		  exit 1
 		fi
 		cp patches/duckstationsa-patch* duckstation/.
-		cp mali/shims/gbm_shim.c duckstation/src/duckstation-nogui/.
-		cp mali/shims/wayland_egl_shim.c duckstation/src/duckstation-nogui/.
 	  else
 		echo " "
 		echo "A duckstation standalone subfolder already exists.  Stopping here to not impact anything in the folder that may be needed.  If not needed, please remove the duckstation folder and rerun this script."
@@ -57,6 +55,9 @@ bitness="$(getconf LONG_BIT)"
 
 	 cd duckstation
      git checkout 5ab5070d73f1acc51e064bd96be4ba6ce3c06f5c
+
+	cp mali/shims/gbm_shim.c src/duckstation-nogui/.
+	cp mali/shims/wayland_egl_shim.c src/duckstation-nogui/.
 	 
 	 duckstationsa_patches=$(find *.patch)
 	 
