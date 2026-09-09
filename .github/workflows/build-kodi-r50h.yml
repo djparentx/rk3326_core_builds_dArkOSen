@@ -48,8 +48,7 @@ jobs:
 
       - name: Build Kodi
         env:
-          CC: ccache gcc
-          CXX: ccache g++
+          PATH: /usr/lib/ccache:/usr/bin:/bin:/usr/local/bin
         run: ./builds.sh kodi
 
       - name: Upload built Kodi binary
