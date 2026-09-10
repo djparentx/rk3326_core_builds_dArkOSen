@@ -61,6 +61,9 @@ fi
 
 make -j$(nproc)
 
+echo "=== Kodi runtime dependencies ==="
+ldd kodi-gbm
+
 if [[ $? != "0" ]]; then
   echo " "
   echo "There was an error while building rotated Kodi at commit $commit with the R50H rotation patch applied. Stopping here."
