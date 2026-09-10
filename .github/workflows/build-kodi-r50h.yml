@@ -47,9 +47,7 @@ jobs:
           sudo ldconfig
 
       - name: Build Kodi
-        env:
-          PATH: /usr/lib/ccache:/usr/bin:/bin:/usr/local/bin
-        run: ./builds.sh kodi
+        run: sudo env "PATH=/usr/lib/ccache:/usr/bin:/bin:/usr/local/bin" ./builds.sh kodi
 
       - name: Upload built Kodi binary
         uses: actions/upload-artifact@v4
