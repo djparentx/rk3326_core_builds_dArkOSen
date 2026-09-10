@@ -72,6 +72,27 @@ fi
 
 strip tools/depends/target/kodi-gbm/kodi-gbm 2>/dev/null || strip kodi-gbm
 
+mkdir -p "$cur_wd/kodi-64/lib"
+
+for lib in \
+    libpython3.12.so.1.0 \
+    libdisplay-info.so.1 \
+    libmysqlclient.so.21 \
+    libfmt.so.9 \
+    libspdlog.so.1.12 \
+    libtag.so.1 \
+    libtinyxml2.so.10
+do
+    libpath=$(ldconfig -p | awk -v lib="$lib" '$1 == lib {print $NF; exit}')
+    if [ -z "$libpath" ]; then
+        echo "ERROR: $lib not found on runner"
+        exit 1
+    fi
+    cp -L "$libpath" "$cur_wd/kodi-64/lib/"
+done
+
+cp kodi-gbm "$cur_wd/kodi-64/kodi-gbm.rot"
+
 if [ ! -d "$cur_wd/kodi-64/" ]; then
   mkdir -v $cur_wd/kodi-64
 fi

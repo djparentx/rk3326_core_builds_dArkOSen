@@ -53,4 +53,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kodi-r50h-rot
-          path: kodi-64/kodi-gbm.rot
+          path: kodi-64/
