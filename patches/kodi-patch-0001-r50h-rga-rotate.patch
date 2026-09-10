@@ -1,5 +1,5 @@
 diff --git a/xbmc/windowing/gbm/CMakeLists.txt b/xbmc/windowing/gbm/CMakeLists.txt
-index 91085f8b7f..6ded522b04 100644
+index 91085f8b7f..aae79fa208 100644
 --- a/xbmc/windowing/gbm/CMakeLists.txt
 +++ b/xbmc/windowing/gbm/CMakeLists.txt
 @@ -1,5 +1,7 @@
@@ -10,13 +10,11 @@ index 91085f8b7f..6ded522b04 100644
  set(SOURCES OptionalsReg.cpp
              WinSystemGbm.cpp
              VideoSyncGbm.cpp
-@@ -23,4 +25,4 @@ if(TARGET OpenGL::GLES)
-   list(APPEND HEADERS WinSystemGbmGLESContext.h)
+@@ -24,3 +26,4 @@ if(TARGET OpenGL::GLES)
  endif()
  
--core_add_library(windowing_gbm)
-+core_add_library(windowing_gbm)
-\ No newline at end of file
+ core_add_library(windowing_gbm)
++target_link_libraries(windowing_gbm PRIVATE RGA::RGA)
 diff --git a/xbmc/windowing/gbm/WinSystemGbm.cpp b/xbmc/windowing/gbm/WinSystemGbm.cpp
 index 72497a2156..4e77a31a44 100644
 --- a/xbmc/windowing/gbm/WinSystemGbm.cpp
