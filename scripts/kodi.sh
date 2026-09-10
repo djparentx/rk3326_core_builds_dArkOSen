@@ -83,11 +83,7 @@ for lib in \
     libtag.so.1 \
     libtinyxml2.so.10
 do
-    libpath=$(ldconfig -p | awk -v lib="$lib" '$1 == lib {print $NF; exit}')
-    if [ -z "$libpath" ]; then
-        echo "ERROR: $lib not found on runner"
-        exit 1
-    fi
+    libpath=$(ldd kodi-gbm | awk -v lib="$lib" '$1 == lib {print $3; exit}')
     cp -L "$libpath" "$cur_wd/kodi-64/lib/"
 done
 
