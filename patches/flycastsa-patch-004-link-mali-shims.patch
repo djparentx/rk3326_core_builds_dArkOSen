@@ -1,11 +1,12 @@
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -251,2 +251,8 @@
+@@ -251,2 +251,9 @@
  	add_executable(${PROJECT_NAME} core/emulator.cpp)
 +	if(FLYCAST_LINK_MALI_SHIMS)
 +		target_sources(${PROJECT_NAME} PRIVATE
 +			gbm_shim.c
 +			wayland_egl_shim.c
 +		)
++		target_link_libraries(${PROJECT_NAME} PRIVATE gbm)
 +	endif()
  endif()
