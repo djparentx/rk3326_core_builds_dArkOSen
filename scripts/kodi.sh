@@ -43,7 +43,7 @@ fi
 mkdir -p build-rot
 cd build-rot
 
-cmake -DCMAKE_INSTALL_PREFIX=/usr \
+cmake -DCMAKE_INSTALL_PREFIX=/opt/kodi \
       -DCORE_PLATFORM_NAME=gbm \
       -DAPP_RENDER_SYSTEM=gles \
       -DENABLE_VAAPI=OFF \
