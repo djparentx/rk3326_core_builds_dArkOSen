@@ -1,8 +1,6 @@
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -249,6 +249,10 @@
- 	add_executable(${PROJECT_NAME} MACOSX_BUNDLE core/emulator.cpp)
- else()
+@@ -251,2 +251,8 @@
  	add_executable(${PROJECT_NAME} core/emulator.cpp)
 +	if(FLYCAST_LINK_MALI_SHIMS)
 +		target_sources(${PROJECT_NAME} PRIVATE
@@ -11,5 +9,3 @@
 +		)
 +	endif()
  endif()
- 
- set_target_properties(${PROJECT_NAME} PROPERTIES
