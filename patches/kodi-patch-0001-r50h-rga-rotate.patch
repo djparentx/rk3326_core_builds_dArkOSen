@@ -18,7 +18,7 @@ index 91085f8b7f..6ded522b04 100644
 +core_add_library(windowing_gbm)
 \ No newline at end of file
 diff --git a/xbmc/windowing/gbm/WinSystemGbm.cpp b/xbmc/windowing/gbm/WinSystemGbm.cpp
-index 72497a2156..450c677cbe 100644
+index 72497a2156..4e77a31a44 100644
 --- a/xbmc/windowing/gbm/WinSystemGbm.cpp
 +++ b/xbmc/windowing/gbm/WinSystemGbm.cpp
 @@ -30,6 +30,7 @@
@@ -94,7 +94,7 @@ index 72497a2156..450c677cbe 100644
  void CWinSystemGbm::UpdateResolutions()
  {
    RESOLUTION_INFO current = m_DRM->GetCurrentMode();
-@@ -290,11 +344,20 @@ void CWinSystemGbm::FlipPage(bool rendered, bool videoLayer, bool async)
+@@ -290,7 +344,16 @@ void CWinSystemGbm::FlipPage(bool rendered, bool videoLayer, bool async)
  
    if (rendered)
    {
@@ -112,13 +112,8 @@ index 72497a2156..450c677cbe 100644
    }
  
    m_DRM->FlipPage(bo, rendered, videoLayer, async);
--
-+  
-   if (m_videoLayerBridge && !videoLayer)
-   {
-     // delete video layer bridge when video layer no longer is active
 diff --git a/xbmc/windowing/gbm/WinSystemGbm.h b/xbmc/windowing/gbm/WinSystemGbm.h
-index 9609675d72..e202b63df1 100644
+index 9609675d72..5f4943f595 100644
 --- a/xbmc/windowing/gbm/WinSystemGbm.h
 +++ b/xbmc/windowing/gbm/WinSystemGbm.h
 @@ -19,6 +19,9 @@
@@ -131,13 +126,17 @@ index 9609675d72..e202b63df1 100644
  
  class IDispResource;
  
-@@ -96,6 +99,15 @@ private:
+@@ -92,10 +95,19 @@ protected:
+   XbmcThreads::EndTime<> m_dispResetTimer;
+   std::unique_ptr<CLibInputHandler> m_libinput;
+ 
++  void InitRotateBuffer(int frameWidth, int frameHeight);
++  void DestroyRotateBuffer();
++
+ private:
    uint32_t m_hdr_blob_id = 0;
  
    std::unique_ptr<UTILS::CDisplayInfo> m_info;
-+
-+  void InitRotateBuffer(int frameWidth, int frameHeight);
-+  void DestroyRotateBuffer();
 +
 +  rga_info_t m_rgaSrcInfo{};
 +  rga_info_t m_rgaDstInfo{};
