@@ -5,49 +5,48 @@ on:
 
 jobs:
   build-kodi-arm64:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache ccache
-        uses: actions/cache@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
         with:
-          path: ~/.ccache
-          key: kodi-ccache-rot-${{ github.sha }}
-          restore-keys: |
-            kodi-ccache-rot-
+          platforms: arm64
 
-      - name: Install dependencies
+      - name: Build Kodi in aarch64 Debian Trixie container
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git cmake pkg-config ccache \
-            autoconf automake autopoint gettext autotools-dev curl default-jre \
-            doxygen gawk gperf libasound2-dev libass-dev libavahi-client-dev \
-            libavahi-common-dev libbluetooth-dev libbluray-dev libbz2-dev \
-            libcdio-dev libp8-platform-dev libcurl4-openssl-dev libcwiid-dev \
-            libdbus-1-dev libdrm-dev libegl1-mesa-dev libflac-dev libfmt-dev \
-            libfontconfig-dev libfreetype-dev libfribidi-dev libfstrcmp-dev \
-            libgcrypt20-dev libgif-dev libgles2-mesa-dev libgnutls28-dev \
-            libgpg-error-dev libjpeg-dev liblcms2-dev libltdl-dev liblzo2-dev \
-            libmicrohttpd-dev libnfs-dev libogg-dev libplist-dev libpng-dev \
-            libsmbclient-dev libspdlog-dev libsqlite3-dev libssl-dev libtag1-dev \
-            libtinyxml-dev libtinyxml2-dev libtool libudev-dev libunistring-dev \
-            libva-dev libvorbis-dev libxslt1-dev nasm python3-dev python3-pil \
-            rapidjson-dev swig unzip uuid-dev zip zlib1g-dev \
-            libflatbuffers-dev libgbm-dev libinput-dev libxkbcommon-dev \
-            libdisplay-info-dev
-
-      - name: Install vendored librga
-        run: |
-          sudo mkdir -p /usr/include/rga
-          sudo cp vendor/rga/include/*.h /usr/include/rga/
-          sudo cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
-          sudo ldconfig
-
-      - name: Build Kodi
-        run: sudo env "PATH=/usr/lib/ccache:/usr/bin:/bin:/usr/local/bin" ./builds.sh kodi
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                autoconf automake autopoint gettext autotools-dev curl default-jre \
+                doxygen gawk gperf libasound2-dev libass-dev libavahi-client-dev \
+                libavahi-common-dev libbluetooth-dev libbluray-dev libbz2-dev \
+                libcdio-dev libp8-platform-dev libcurl4-openssl-dev libcwiid-dev \
+                libdbus-1-dev libdrm-dev libegl1-mesa-dev libflac-dev libfmt-dev \
+                libfontconfig-dev libfreetype-dev libfribidi-dev libfstrcmp-dev \
+                libgcrypt20-dev libgif-dev libgles2-mesa-dev libgnutls28-dev \
+                libgpg-error-dev libjpeg-dev liblcms2-dev libltdl-dev liblzo2-dev \
+                libmicrohttpd-dev libnfs-dev libogg-dev libplist-dev libpng-dev \
+                libsmbclient-dev libspdlog-dev libsqlite3-dev libssl-dev libtag1-dev \
+                libtinyxml-dev libtinyxml2-dev libtool libudev-dev libunistring-dev \
+                libva-dev libvorbis-dev libxslt1-dev nasm python3-dev python3-pil \
+                rapidjson-dev swig unzip uuid-dev zip zlib1g-dev \
+                libflatbuffers-dev libgbm-dev libinput-dev libxkbcommon-dev \
+                libdisplay-info-dev
+              mkdir -p /usr/include/rga
+              cp vendor/rga/include/*.h /usr/include/rga/
+              cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
+              ldconfig
+              ./builds.sh kodi
+            "
 
       - name: Upload built Kodi binary
         uses: actions/upload-artifact@v4
