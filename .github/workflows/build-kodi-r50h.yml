@@ -16,6 +16,14 @@ jobs:
         with:
           platforms: arm64
 
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: kodi-ccache-trixie-${{ github.sha }}
+          restore-keys: |
+            kodi-ccache-trixie-
+
       - name: Build Kodi in aarch64 Debian Trixie container
         run: |
           docker run --rm --platform linux/arm64 \
@@ -25,7 +33,7 @@ jobs:
             bash -c "
               set -e
               apt-get update
-              apt-get install -y build-essential git cmake pkg-config \
+                apt-get install -y build-essential git cmake pkg-config ccache \
                 autoconf automake autopoint gettext autotools-dev curl default-jre \
                 doxygen gawk gperf libasound2-dev libass-dev libavahi-client-dev \
                 libavahi-common-dev libbluetooth-dev libbluray-dev libbz2-dev \
@@ -45,7 +53,9 @@ jobs:
               cp vendor/rga/include/*.h /usr/include/rga/
               cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
               ldconfig
-              ./builds.sh kodi
+              mkdir -p /workspace/.ccache
+              export CCACHE_DIR=/workspace/.ccache
+              env 'PATH=/usr/lib/ccache:/usr/bin:/bin:/usr/local/bin' ./builds.sh kodi
             "
 
       - name: Upload built Kodi binary
