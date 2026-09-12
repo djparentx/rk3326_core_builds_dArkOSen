@@ -186,4 +186,17 @@ index 3dd4ee9783..ede5d4b358 100644
 +  res.iScreenHeight = mode->hdisplay;
    res.iWidth = res.iScreenWidth;
    res.iHeight = res.iScreenHeight;
+diff --git a/xbmc/windowing/gbm/GBMUtils.cpp b/xbmc/windowing/gbm/GBMUtils.cpp
+index 1111111..2222222 100644
+--- a/xbmc/windowing/gbm/GBMUtils.cpp
++++ b/xbmc/windowing/gbm/GBMUtils.cpp
+@@ -52,7 +52,7 @@ bool CGBMUtils::CGBMDevice::CreateSurface(
+   if (!surface)
+   {
+     surface = gbm_surface_create(m_device, width, height, format,
+-                                 GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
++                                 GBM_BO_USE_RENDERING);
+   }
+ 
+   if (!surface)
  
