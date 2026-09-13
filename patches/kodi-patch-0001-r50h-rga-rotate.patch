@@ -90,9 +90,9 @@ index 72497a2156..4e77a31a44 100644
 +  c_RkRgaDeInit();
 +}
 +
-  void CWinSystemGbm::UpdateResolutions()
-  {
-    RESOLUTION_INFO current = m_DRM->GetCurrentMode();
+ void CWinSystemGbm::UpdateResolutions()
+ {
+   RESOLUTION_INFO current = m_DRM->GetCurrentMode();
 @@ -290,7 +344,16 @@ void CWinSystemGbm::FlipPage(bool rendered, bool videoLayer, bool async)
  
    if (rendered)
@@ -192,7 +192,7 @@ diff --git a/xbmc/windowing/gbm/GBMUtils.cpp b/xbmc/windowing/gbm/GBMUtils.cpp
 index 1111111..2222222 100644
 --- a/xbmc/windowing/gbm/GBMUtils.cpp
 +++ b/xbmc/windowing/gbm/GBMUtils.cpp
-@@ -52,8 +52,8 @@ bool CGBMUtils::CGBMDevice::CreateSurface(
+@@ -52,7 +52,7 @@ bool CGBMUtils::CGBMDevice::CreateSurface(
    if (!surface)
    {
      surface = gbm_surface_create(m_device, width, height, format,
@@ -214,19 +214,3 @@ index 5555555..6666666 100644
  
  #include "GBMDPMSSupport.h"
  #include "OptionalsReg.h"
-diff --git a/xbmc/windowing/gbm/WinSystemGbm.cpp b/xbmc/windowing/gbm/WinSystemGbm.cpp
-index 3333333..4444444 100644
---- a/xbmc/windowing/gbm/WinSystemGbm.cpp
-+++ b/xbmc/windowing/gbm/WinSystemGbm.cpp
-@@ -182,9 +182,10 @@ void CWinSystemGbm::InitRotateBuffer(int frameWidth, int frameHeight)
- void CWinSystemGbm::InitRotateBuffer(int frameWidth, int frameHeight)
- {
-   DestroyRotateBuffer();
- 
--  c_RkRgaInit();
-+  static std::once_flag rgaInitFlag;
-+  std::call_once(rgaInitFlag, []() { c_RkRgaInit(); });
- 
-   int l_frameHeight = frameHeight;
-   if (l_frameHeight % 32 != 0)
-     l_frameHeight = (frameHeight + 32) & (~31);
