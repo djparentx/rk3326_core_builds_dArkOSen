@@ -90,9 +90,9 @@ index 72497a2156..4e77a31a44 100644
 +  c_RkRgaDeInit();
 +}
 +
- void CWinSystemGbm::UpdateResolutions()
- {
-   RESOLUTION_INFO current = m_DRM->GetCurrentMode();
+  void CWinSystemGbm::UpdateResolutions()
+  {
+    RESOLUTION_INFO current = m_DRM->GetCurrentMode();
 @@ -290,7 +344,16 @@ void CWinSystemGbm::FlipPage(bool rendered, bool videoLayer, bool async)
  
    if (rendered)
