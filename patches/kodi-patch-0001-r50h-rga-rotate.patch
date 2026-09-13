@@ -41,7 +41,8 @@ index 72497a2156..4e77a31a44 100644
 +{
 +  DestroyRotateBuffer();
 +
-+  c_RkRgaInit();
++  static std::once_flag rgaInitFlag;
++  std::call_once(rgaInitFlag, []() { c_RkRgaInit(); });
 +
 +  int l_frameHeight = frameHeight;
 +  if (l_frameHeight % 32 != 0)
@@ -200,22 +201,32 @@ index 1111111..2222222 100644
    }
  
    if (!surface)
-
+ 
+diff --git a/xbmc/windowing/gbm/WinSystemGbm.cpp b/xbmc/windowing/gbm/WinSystemGbm.cpp
+index 5555555..6666666 100644
+--- a/xbmc/windowing/gbm/WinSystemGbm.cpp
++++ b/xbmc/windowing/gbm/WinSystemGbm.cpp
+@@ -7,6 +7,7 @@
+  */
+ 
+ #include "WinSystemGbm.h"
++#include <mutex>
+ 
+ #include "GBMDPMSSupport.h"
+ #include "OptionalsReg.h"
 diff --git a/xbmc/windowing/gbm/WinSystemGbm.cpp b/xbmc/windowing/gbm/WinSystemGbm.cpp
 index 3333333..4444444 100644
 --- a/xbmc/windowing/gbm/WinSystemGbm.cpp
 +++ b/xbmc/windowing/gbm/WinSystemGbm.cpp
-@@ -182,9 +182,14 @@ void CWinSystemGbm::InitRotateBuffer(int frameWidth, int frameHeight)
+@@ -182,9 +182,10 @@ void CWinSystemGbm::InitRotateBuffer(int frameWidth, int frameHeight)
  void CWinSystemGbm::InitRotateBuffer(int frameWidth, int frameHeight)
  {
    DestroyRotateBuffer();
  
-+  static bool rgaInitialized = false;
-+  if (!rgaInitialized)
-+  {
-   c_RkRgaInit();
-+    rgaInitialized = true;
-+  }
+-  c_RkRgaInit();
++  static std::once_flag rgaInitFlag;
++  std::call_once(rgaInitFlag, []() { c_RkRgaInit(); });
  
    int l_frameHeight = frameHeight;
    if (l_frameHeight % 32 != 0)
+     l_frameHeight = (frameHeight + 32) & (~31);
