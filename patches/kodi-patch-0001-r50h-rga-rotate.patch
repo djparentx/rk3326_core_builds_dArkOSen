@@ -27,7 +27,7 @@ index 72497a2156..4e77a31a44 100644
  
  #ifndef HAVE_HDR_OUTPUT_METADATA
  // HDR structs is copied from linux include/linux/hdmi.h
-@@ -172,11 +173,64 @@ bool CWinSystemGbm::DestroyWindowSystem()
+@@ -172,11 +173,65 @@ bool CWinSystemGbm::DestroyWindowSystem()
  {
    CLog::Log(LOGDEBUG, "CWinSystemGbm::{} - deinitialized DRM", __FUNCTION__);
  
@@ -192,7 +192,7 @@ diff --git a/xbmc/windowing/gbm/GBMUtils.cpp b/xbmc/windowing/gbm/GBMUtils.cpp
 index 1111111..2222222 100644
 --- a/xbmc/windowing/gbm/GBMUtils.cpp
 +++ b/xbmc/windowing/gbm/GBMUtils.cpp
-@@ -52,7 +52,7 @@ bool CGBMUtils::CGBMDevice::CreateSurface(
+@@ -52,8 +52,8 @@ bool CGBMUtils::CGBMDevice::CreateSurface(
    if (!surface)
    {
      surface = gbm_surface_create(m_device, width, height, format,
