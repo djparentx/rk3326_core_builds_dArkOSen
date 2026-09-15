@@ -31,7 +31,7 @@ cd build-unrot
 cmake -DCMAKE_INSTALL_PREFIX=/opt/kodi \
       -DCORE_PLATFORM_NAME=gbm \
       -DAPP_RENDER_SYSTEM=gles \
-      -DENABLE_VAAPI=OFF \
+      -DENABLE_VAAPI=ON \
       -DENABLE_VDPAU=OFF \
       -DENABLE_INTERNAL_FFMPEG=ON \
       -DENABLE_INTERNAL_PCRE=ON \
