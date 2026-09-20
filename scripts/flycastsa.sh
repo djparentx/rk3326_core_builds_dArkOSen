@@ -54,61 +54,50 @@ TAG="v2.6"
         export CPLUS_INCLUDE_PATH=/usr/include/c++/13:/usr/include/c++/13/backward:/usr/local/include/c++/13/aarch64-linux-gnu
       fi
 
-	  for sdlmode in unrot rot
-	  do
-	    cd $cur_wd/flycast
-	    rm -rf ../flycast-build
-	    mkdir ../flycast-build
-	    cd ../flycast-build
+	  cd $cur_wd/flycast
+	  rm -rf ../flycast-build
+	  mkdir ../flycast-build
+	  cd ../flycast-build
 
-	    export CXXFLAGS="${CXXFLAGS} -Wno-error=array-bounds"
+	  export CXXFLAGS="${CXXFLAGS} -Wno-error=array-bounds"
 
-	    if [[ "$sdlmode" == "rot" ]]; then
-	      hostsdlflag="-DUSE_HOST_SDL=ON"
-	      shimflag="-DFLYCAST_LINK_MALI_SHIMS=ON"
-	    else
-	      hostsdlflag="-DUSE_HOST_SDL=OFF"
-	      shimflag="-DFLYCAST_LINK_MALI_SHIMS=OFF"
-	    fi
+	  cmake -S ../flycast \
+	    -DCMAKE_RULE_MESSAGES=OFF \
+	    -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
+	    -DCMAKE_BUILD_TYPE="Release" \
+	    -DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+	    -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG" \
+	    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+	    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+	    -DWITH_SYSTEM_ZLIB=ON \
+	    -DUSE_PULSEAUDIO=OFF \
+	    -DUSE_OPENMP=ON \
+	    -DUSE_VULKAN=OFF \
+	    -DUSE_GLES=ON -DUSE_HOST_SDL=ON -DFLYCAST_LINK_MALI_SHIMS=ON -B .
 
-	    cmake -S ../flycast \
-	      -DCMAKE_RULE_MESSAGES=OFF \
-	      -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
-	      -DCMAKE_BUILD_TYPE="Release" \
-	      -DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
-	      -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG" \
-	      -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-	      -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-	      -DWITH_SYSTEM_ZLIB=ON \
-	      -DUSE_PULSEAUDIO=OFF \
-	      -DUSE_OPENMP=ON \
-	      -DUSE_VULKAN=OFF \
-	      -DUSE_GLES=ON ${hostsdlflag} ${shimflag} -B .
+	  make -j$(nproc)
 
-	    make -j$(nproc)
+	  if [[ $? != "0" ]]; then
+	    if [[ "$0" != *"builds-alt"* ]]; then
+		  update-alternatives --set gcc "/usr/bin/gcc-8"
+		  update-alternatives --set g++ "/usr/bin/g++-8"
+		  unset CPLUS_INCLUDE_PATH
+		fi
+		echo " "
+		echo "There was an error while building the flycast standalone emulator.  Stopping here."
+		exit 1
+	  fi
 
-	    if [[ $? != "0" ]]; then
-	      if [[ "$0" != *"builds-alt"* ]]; then
-		    update-alternatives --set gcc "/usr/bin/gcc-8"
-		    update-alternatives --set g++ "/usr/bin/g++-8"
-		    unset CPLUS_INCLUDE_PATH
-		  fi
-		  echo " "
-		  echo "There was an error while building the $sdlmode flycast standalone emulator.  Stopping here."
-		  exit 1
-	    fi
+	  strip flycast
 
-	    strip flycast
+	  if [ ! -d "../flycastsa-$(getconf LONG_BIT)/" ]; then
+		mkdir -v ../flycastsa-$(getconf LONG_BIT)
+	  fi
 
-	    if [ ! -d "../flycastsa-$(getconf LONG_BIT)/" ]; then
-		  mkdir -v ../flycastsa-$(getconf LONG_BIT)
-	    fi
+	  cp flycast ../flycastsa-$(getconf LONG_BIT)/flycast-rk3326
 
-	    cp flycast ../flycastsa-$(getconf LONG_BIT)/flycast-rk3326.${sdlmode}
-
-	    echo " "
-	    echo "Flycast standalone ($sdlmode) has been created and has been placed in the rk3326_core_builds/flycastsa-$(getconf LONG_BIT) subfolder"
-	  done
+	  echo " "
+	  echo "Flycast standalone has been created and has been placed in the rk3326_core_builds/flycastsa-$(getconf LONG_BIT) subfolder"
 
 	  if [[ "$0" != *"builds-alt"* ]]; then
 	    update-alternatives --set gcc "/usr/bin/gcc-8"

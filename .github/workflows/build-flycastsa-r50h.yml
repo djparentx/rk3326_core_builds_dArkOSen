@@ -44,12 +44,11 @@ jobs:
             "
 
       - name: Debug - list build output
-        run: find . -iname "flycast-rk3326*"
+        run: find . -iname "flycast-rk3326"
 
-      - name: Upload built Flycast binaries
+      - name: Upload built Flycast binary
         uses: actions/upload-artifact@v4
         with:
           name: flycastsa-r50h-build
           path: |
-            flycastsa-64/flycast-rk3326.rot
-            flycastsa-64/flycast-rk3326.unrot
+            flycastsa-64/flycast-rk3326
