@@ -1,0 +1,140 @@
+--- a/gfx/drivers_context/drm_go2_ctx.c
++++ b/gfx/drivers_context/drm_go2_ctx.c
+@@ -19,7 +19,9 @@
+  */
+ 
+ #include <stdint.h>
++#include <stdio.h>
+ #include <string.h>
++#include <ctype.h>
+ #include <unistd.h>
+ #include <math.h>
+ 
+@@ -82,8 +84,58 @@
+    unsigned native_width;
+    unsigned native_height;
+    bool core_hw_context_enable;
++   bool rotated;
+ } gfx_ctx_go2_drm_data_t;
+ 
++/* dArkOS: rotation is decided at runtime, not at compile time. When
++ * /home/ark/.config/.DEVICE contains "rotated" (case-insensitive, same
++ * convention as the dArkOSen Kodi build), this driver drives the panel
++ * as a rotated (portrait-panel-in-landscape-housing) screen. Otherwise
++ * it drives it as a normal landscape panel. Checked once and cached. */
++#define GO2_DRM_DEVICE_FLAG_FILE "/home/ark/.config/.DEVICE"
++#define GO2_DRM_DEVICE_FLAG_TAG  "rotated"
++
++static bool go2_drm_device_is_rotated(void)
++{
++   static bool checked = false;
++   static bool rotated = false;
++
++   if (!checked)
++   {
++      char buf[256];
++      FILE *f  = fopen(GO2_DRM_DEVICE_FLAG_FILE, "r");
++      checked  = true;
++
++      if (f)
++      {
++         size_t len = fread(buf, 1, sizeof(buf) - 1, f);
++         fclose(f);
++         buf[len] = '\0';
++
++         if (len >= strlen(GO2_DRM_DEVICE_FLAG_TAG))
++         {
++            size_t tag_len = strlen(GO2_DRM_DEVICE_FLAG_TAG);
++            size_t i;
++
++            for (i = 0; buf[i] != '\0' && !rotated; i++)
++            {
++               size_t j;
++               for (j = 0; j < tag_len && buf[i + j] != '\0'; j++)
++               {
++                  if (tolower((unsigned char)buf[i + j]) !=
++                        tolower((unsigned char)GO2_DRM_DEVICE_FLAG_TAG[j]))
++                     break;
++               }
++               if (j == tag_len)
++                  rotated = true;
++            }
++         }
++      }
++   }
++
++   return rotated;
++}
++
+ /* TODO/FIXME - static global */
+ static enum gfx_ctx_api drm_api           = GFX_CTX_NONE;
+ 
+@@ -117,21 +169,33 @@
+       return NULL;
+ 
+    drm->display       = go2_display_create();
++   drm->rotated       = go2_drm_device_is_rotated();
+ 
+-   drm->native_width  = go2_display_height_get(drm->display);
+-   drm->native_height = go2_display_width_get(drm->display);
+-
+-   /* This driver should only be used on rotated screens */
+-   if (drm->native_width < drm->native_height)
++   if (drm->rotated)
+    {
+-      /* This should be fixed by using wayland/weston... */
+-      go2_display_destroy(drm->display);
+-      free(drm);
+-      return NULL;
++      drm->native_width  = go2_display_height_get(drm->display);
++      drm->native_height = go2_display_width_get(drm->display);
++
++      /* This driver should only be used on rotated screens */
++      if (drm->native_width < drm->native_height)
++      {
++         /* This should be fixed by using wayland/weston... */
++         go2_display_destroy(drm->display);
++         free(drm);
++         return NULL;
++      }
++
++      drm->presenter     = go2_presenter_create(drm->display,
++            DRM_FORMAT_RGB565, 0xff000000, true);
+    }
++   else
++   {
++      drm->native_width  = go2_display_width_get(drm->display);
++      drm->native_height = go2_display_height_get(drm->display);
+ 
+-   drm->presenter     = go2_presenter_create(drm->display,
+-         DRM_FORMAT_RGB565, 0xff000000, true);
++      drm->presenter     = go2_presenter_create(drm->display,
++            DRM_FORMAT_XRGB8888, 0xff000000, true);
++   }
+ 
+    return drm;
+ }
+@@ -342,11 +406,18 @@
+ #ifdef HAVE_EGL
+    go2_context_swap_buffers(drm->context);
+    surf     = go2_context_surface_lock(drm->context);
+-   go2_presenter_post(drm->presenter,
+-         surf,
+-         src_x, src_y, src_w, src_h,
+-         out_y, out_x, out_h, out_w,
+-         GO2_ROTATION_DEGREES_270, 2);
++   if (drm->rotated)
++      go2_presenter_post(drm->presenter,
++            surf,
++            src_x, src_y, src_w, src_h,
++            out_y, out_x, out_h, out_w,
++            GO2_ROTATION_DEGREES_270, 2);
++   else
++      go2_presenter_post(drm->presenter,
++            surf,
++            src_x, src_y, src_w, src_h,
++            out_x, out_y, out_w, out_h,
++            GO2_ROTATION_DEGREES_0, 2);
+    go2_context_surface_unlock(drm->context, surf);
+ #endif
+ }

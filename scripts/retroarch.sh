@@ -34,15 +34,11 @@ tag="v1.22.2"
 
 	 retroarch_patches=$(find *.patch)
 	 
+	 retroarch_patches=$(find *.patch)
+	 
 	 if [[ ! -z "$retroarch_patches" ]]; then
 	  for patching in retroarch-patch*
 	  do
-        if [[ $patching == *"norotation"* ]]; then
-          echo " "
-          echo "Skipping the $patching for now and making a note to apply that later"
-          sleep 3
-          retroarch_rgapatch="yes"
-        else
 		   patch -Np1 < "$patching"
 		   if [[ $? != "0" ]]; then
 			echo " "
@@ -50,9 +46,9 @@ tag="v1.22.2"
 			exit 1
 		   fi
 		   rm "$patching" 
-        fi
 	  done
 	 fi
+	 
 	  if [[ "$bitness" == "64" ]]; then
 	    CFLAGS="-Ofast -march=armv8-a -mtune=cortex-a35 -fomit-frame-pointer -DNDEBUG" ./configure --disable-caca \
 	    --disable-mali_fbdev \
@@ -142,58 +138,18 @@ tag="v1.22.2"
 		mkdir -v ../retroarch$bitness
 	  fi
 
-	  cp retroarch ../retroarch$bitness/retroarch.rk3326.rot
+	  cp retroarch ../retroarch$bitness/retroarch.rk3326
 
 	  if [[ "$bitness" == "32" ]]; then
-		mv ../retroarch$bitness/retroarch.rk3326.rot ../retroarch$bitness/retroarch32.rk3326.rot
+		mv ../retroarch$bitness/retroarch.rk3326 ../retroarch$bitness/retroarch32.rk3326
 	  fi
 
 	  echo " "
 	  if [[ "$bitness" == "32" ]]; then
-		echo "retroarch32.rk3326.rot has been created and has been placed in the rk3326_core_builds/retroarch$bitness subfolder"
+		echo "retroarch32.rk3326 has been created and has been placed in the rk3326_core_builds/retroarch$bitness subfolder"
 	  else
-		echo "retroarch.rk3326.rot has been created and has been placed in the rk3326_core_builds/retroarch$bitness subfolder"
+		echo "retroarch.rk3326 has been created and has been placed in the rk3326_core_builds/retroarch$bitness subfolder"
 	  fi
-
-      if [[ $retroarch_rgapatch == "yes" ]]; then
-    	  for patching in retroarch-patch*
-      	  do
-       	    patch -Np1 < "$patching"
-       		if [[ $? != "0" ]]; then
-       		  echo " "
-       		  echo "There was an error while applying $patching.  Stopping here."
-       		  exit 1
-       		fi
-       		rm "$patching"
-       	  done
-
-	      make -j$(nproc)
-
-	      if [[ $? != "0" ]]; then
-		    echo " "
-		    echo "There was an error while building the newest retroarch with the rga non rotation patch.  Stopping here."
-		    exit 1
-	      fi
-
-	      strip retroarch
-
-	      if [ ! -d "../retroarch$bitness/" ]; then
-		    mkdir -v ../retroarch$bitness
-	      fi
-
-	      cp retroarch ../retroarch$bitness/retroarch.rk3326.unrot
-
-	      if [[ "$bitness" == "32" ]]; then
-		    mv ../retroarch$bitness/retroarch.rk3326.unrot ../retroarch$bitness/retroarch32.rk3326.unrot
-	      fi
-
-	      echo " "
-	      if [[ "$bitness" == "32" ]]; then
-		    echo "retroarch32.rk3326.unrot has been created and has been placed in the rk3326_core_builds/retroarch$bitness subfolder"
-	      else
-		    echo "retroarch.rk3326.unrot has been created and has been placed in the rk3326_core_builds/retroarch$bitness subfolder"
-	      fi
-      fi
 
 	  cd gfx/video_filters
 	  ./configure
