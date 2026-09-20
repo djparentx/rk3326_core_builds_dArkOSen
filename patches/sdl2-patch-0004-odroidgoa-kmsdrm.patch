@@ -1,8 +1,6 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 26fe83205..32a339b05 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -557,7 +557,7 @@ if(USE_GCC OR USE_CLANG)
+@@ -721,7 +721,7 @@
      check_c_compiler_flag("" HAVE_NO_UNDEFINED)
      set(CMAKE_REQUIRED_FLAGS ${ORIG_CMAKE_REQUIRED_FLAGS})
      if(HAVE_NO_UNDEFINED AND NOT (USE_CLANG AND WINDOWS))
@@ -10,12 +8,10 @@ index 26fe83205..32a339b05 100644
 +      list(APPEND EXTRA_LDFLAGS_BUILD "-Wl,--no-undefined -lrga")
      endif()
    endif()
- endif()
-diff --git a/Makefile.in b/Makefile.in
-index 65ccc55..bf4e3aa 100644
+ 
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -22,7 +22,7 @@ CC      = @CC@
+@@ -23,7 +23,7 @@
  INCLUDE = @INCLUDE@
  CFLAGS  = @BUILD_CFLAGS@
  EXTRA_CFLAGS = @EXTRA_CFLAGS@
@@ -24,39 +20,32 @@ index 65ccc55..bf4e3aa 100644
  EXTRA_LDFLAGS = @EXTRA_LDFLAGS@
  LIBTOOL = @LIBTOOL@
  INSTALL = @INSTALL@
-diff --git a/src/video/kmsdrm/SDL_kmsdrmopengles.c b/src/video/kmsdrm/SDL_kmsdrmopengles.c
-index 9b34d6896..83dc39bb4 100644
 --- a/src/video/kmsdrm/SDL_kmsdrmopengles.c
 +++ b/src/video/kmsdrm/SDL_kmsdrmopengles.c
 @@ -30,11 +30,15 @@
  #include "SDL_kmsdrmopengles.h"
  #include "SDL_kmsdrmdyn.h"
  #include <errno.h>
-+#include<stdbool.h>
-
++#include <stdbool.h>
+ 
  #ifndef EGL_PLATFORM_GBM_MESA
  #define EGL_PLATFORM_GBM_MESA 0x31D7
  #endif
-
+ 
 +extern rga_info_t src_info;
 +extern rga_info_t dst_info;
 +
  /* EGL implementation of SDL OpenGL support */
-
+ 
  void KMSDRM_GLES_DefaultProfileConfig(_THIS, int *mask, int *major, int *minor)
-@@ -93,6 +97,7 @@ int KMSDRM_GLES_SwapWindow(_THIS, SDL_Window *window)
-     SDL_VideoData *viddata = ((SDL_VideoData *)_this->driverdata);
-     KMSDRM_FBInfo *fb_info;
-     int ret = 0;
-+    struct gbm_bo* rga_buffer = NULL;
-
-     /* Always wait for the previous issued flip before issuing a new one,
-        even if you do async flips. */
-@@ -143,7 +148,26 @@ int KMSDRM_GLES_SwapWindow(_THIS, SDL_Window *window)
+@@ -143,7 +147,26 @@
      }
-
+ 
      /* Get an actual usable fb for the next front buffer. */
 -    fb_info = KMSDRM_FBFromBO(_this, windata->next_bo);
++    if (viddata->rotated) {
++        struct gbm_bo *rga_buffer;
++
 +        if (src_info.fd) {
 +            close(src_info.fd);
 +        }
@@ -70,59 +59,92 @@ index 9b34d6896..83dc39bb4 100644
 +        rga_buffer = viddata->rga_buffers[viddata->rga_buffer_index];
 +        fb_info = KMSDRM_FBFromBO(_this, rga_buffer);
 +
-+        if (!fb_info) {
-+         SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not get a framebuffer");
-+         return 0;
-+        }
-+
 +        viddata->rga_buffer_index = (viddata->rga_buffer_index + 1) % RGA_BUFFERS_MAX;
-+
++    } else {
++        fb_info = KMSDRM_FBFromBO(_this, windata->next_bo);
++    }
      if (!fb_info) {
          SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not get a framebuffer");
          return 0;
-diff --git a/src/video/kmsdrm/SDL_kmsdrmsym.h b/src/video/kmsdrm/SDL_kmsdrmsym.h
-index e378fdfb0..6538b6b75 100644
 --- a/src/video/kmsdrm/SDL_kmsdrmsym.h
 +++ b/src/video/kmsdrm/SDL_kmsdrmsym.h
-@@ -119,6 +119,7 @@ SDL_KMSDRM_SYM(void,gbm_surface_destroy,(struct gbm_surface *surf))
+@@ -132,6 +132,7 @@
+ SDL_KMSDRM_SYM(void,gbm_surface_destroy,(struct gbm_surface *surf))
  SDL_KMSDRM_SYM(struct gbm_bo *,gbm_surface_lock_front_buffer,(struct gbm_surface *surf))
  SDL_KMSDRM_SYM(void,gbm_surface_release_buffer,(struct gbm_surface *surf, struct gbm_bo *bo))
- 
 +SDL_KMSDRM_SYM(int,gbm_bo_get_fd,(struct gbm_bo *bo))
  
- #undef SDL_KMSDRM_MODULE
- #undef SDL_KMSDRM_SYM
-diff --git a/src/video/kmsdrm/SDL_kmsdrmvideo.c b/src/video/kmsdrm/SDL_kmsdrmvideo.c
-index ebe15fe9c..74d673529 100644
+ SDL_KMSDRM_SYM_OPT(uint64_t,gbm_bo_get_modifier,(struct gbm_bo *bo))
+ SDL_KMSDRM_SYM_OPT(int,gbm_bo_get_plane_count,(struct gbm_bo *bo))
 --- a/src/video/kmsdrm/SDL_kmsdrmvideo.c
 +++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c
-@@ -44,6 +44,7 @@
- #include "SDL_kmsdrmopengles.h"
- #include "SDL_kmsdrmmouse.h"
- #include "SDL_kmsdrmdyn.h"
-+#include <sys/ioctl.h>
- #include "SDL_kmsdrmvulkan.h"
- #include <sys/stat.h>
- #include <sys/param.h>
-@@ -51,6 +52,7 @@
+@@ -51,6 +51,10 @@
  #include <dirent.h>
  #include <poll.h>
  #include <errno.h>
-+#include<stdbool.h>
++#include <sys/ioctl.h>
++#include <stdio.h>
++#include <stdbool.h>
++#include <ctype.h>
  
  #ifdef __OpenBSD__
  static SDL_bool moderndri = SDL_FALSE;
-@@ -68,6 +70,9 @@ static char kmsdrm_dri_cardpath[32];
+@@ -68,6 +72,54 @@
  #define EGL_PLATFORM_GBM_MESA 0x31D7
  #endif
  
 +rga_info_t src_info = {0};
 +rga_info_t dst_info = {0};
 +
++/* dArkOS: rotation is decided at runtime, not at compile time. When
++ * /home/ark/.config/.DEVICE contains "rotated" (case-insensitive, same
++ * convention as the dArkOSen Kodi and RetroArch builds), this driver
++ * drives the panel as a rotated (portrait-panel-in-landscape-housing)
++ * screen, using the RGA 2D blitter. Otherwise it drives it as a normal
++ * landscape panel with the stock kmsdrm code path. Checked once, cached. */
++#define KMSDRM_DEVICE_FLAG_FILE "/home/ark/.config/.DEVICE"
++#define KMSDRM_DEVICE_FLAG_TAG  "rotated"
++
++static SDL_bool KMSDRM_DeviceIsRotated(void)
++{
++    static SDL_bool checked = SDL_FALSE;
++    static SDL_bool rotated = SDL_FALSE;
++
++    if (!checked) {
++        char buf[256];
++        FILE *f = fopen(KMSDRM_DEVICE_FLAG_FILE, "r");
++        checked = SDL_TRUE;
++
++        if (f) {
++            size_t len = fread(buf, 1, sizeof(buf) - 1, f);
++            fclose(f);
++            buf[len] = '\0';
++
++            if (len >= SDL_strlen(KMSDRM_DEVICE_FLAG_TAG)) {
++                size_t tag_len = SDL_strlen(KMSDRM_DEVICE_FLAG_TAG);
++                size_t i;
++
++                for (i = 0; buf[i] != '\0' && !rotated; i++) {
++                    size_t j;
++                    for (j = 0; j < tag_len && buf[i + j] != '\0'; j++) {
++                        if (tolower((unsigned char)buf[i + j]) !=
++                                tolower((unsigned char)KMSDRM_DEVICE_FLAG_TAG[j]))
++                            break;
++                    }
++                    if (j == tag_len)
++                        rotated = SDL_TRUE;
++                }
++            }
++        }
++    }
++
++    return rotated;
++}
++
  static int get_driindex(void)
  {
      int available = -ENOENT;
-@@ -330,6 +335,46 @@ static void KMSDRM_FBDestroyCallback(struct gbm_bo *bo, void *data)
+@@ -332,6 +384,45 @@
      SDL_free(fb_info);
  }
  
@@ -132,17 +154,16 @@ index ebe15fe9c..74d673529 100644
 +    int l_frameHeight;
 +    SDL_VideoData *viddata = ((SDL_VideoData *)_this->driverdata);
 +
-+    // initialize 2D raster graphic acceleration unit (RGA)
++    /* initialize 2D raster graphic acceleration unit (RGA) */
 +    c_RkRgaInit();
 +
 +    l_frameHeight = frameHeight;
-+    if(l_frameHeight % 32 != 0) {
-+    l_frameHeight = (frameHeight + 32) & (~31);
++    if (l_frameHeight % 32 != 0) {
++        l_frameHeight = (frameHeight + 32) & (~31);
 +    }
 +
-+    // create buffers for RGA with adjusted stride
-+    for (int i = 0; i < RGA_BUFFERS_MAX; ++i)
-+    {
++    /* create buffers for RGA with adjusted stride */
++    for (int i = 0; i < RGA_BUFFERS_MAX; ++i) {
 +        viddata->rga_buffers[i] = KMSDRM_gbm_bo_create(viddata->gbm_dev,
 +            frameWidth, l_frameHeight,
 +            GBM_FORMAT_XRGB8888, GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
@@ -152,12 +173,12 @@ index ebe15fe9c..74d673529 100644
 +    }
 +    viddata->rga_buffer_index = 0;
 +
-+    // setup rotation
++    /* setup rotation */
 +    src_info.fd = -1;
 +    src_info.mmuFlag = 1;
 +    src_info.rotation = HAL_TRANSFORM_ROT_270;
 +
-+    // swap width and height and adjust stride here because our source buffer is 480x854
++    /* swap width and height and adjust stride here because our source buffer is 480x854 */
 +    rga_set_rect(&src_info.rect, 0, 0, frameHeight, frameWidth, l_frameHeight, frameWidth, RK_FORMAT_BGRA_8888);
 +
 +    dst_info.fd = -1;
@@ -169,97 +190,140 @@ index ebe15fe9c..74d673529 100644
  KMSDRM_FBInfo *KMSDRM_FBFromBO(_THIS, struct gbm_bo *bo)
  {
      SDL_VideoData *viddata = ((SDL_VideoData *)_this->driverdata);
-@@ -848,8 +893,8 @@ static void KMSDRM_AddDisplay(_THIS, drmModeConnector *connector, drmModeRes *re
+@@ -736,6 +827,7 @@
+        to sane values. */
+     dispdata->cursor_bo = NULL;
+     dispdata->cursor_bo_drm_fd = -1;
++    dispdata->rotated = viddata->rotated;
+ 
+     /* Since we create and show the default cursor on KMSDRM_InitMouse(),
+        and we call KMSDRM_InitMouse() when we create a window, we have to know
+@@ -898,8 +990,13 @@
      modedata->mode_index = mode_index;
  
      display.driverdata = dispdata;
 -    display.desktop_mode.w = dispdata->mode.hdisplay;
 -    display.desktop_mode.h = dispdata->mode.vdisplay;
-+    display.desktop_mode.w = dispdata->mode.vdisplay;
-+    display.desktop_mode.h = dispdata->mode.hdisplay;
++    if (dispdata->rotated) {
++        display.desktop_mode.w = dispdata->mode.vdisplay;
++        display.desktop_mode.h = dispdata->mode.hdisplay;
++    } else {
++        display.desktop_mode.w = dispdata->mode.hdisplay;
++        display.desktop_mode.h = dispdata->mode.vdisplay;
++    }
      display.desktop_mode.refresh_rate = dispdata->mode.vrefresh;
      display.desktop_mode.format = SDL_PIXELFORMAT_ARGB8888;
      display.desktop_mode.driverdata = modedata;
-@@ -1124,7 +1169,7 @@ static void KMSDRM_DirtySurfaces(SDL_Window *window)
+@@ -1171,6 +1268,7 @@
+ static void KMSDRM_DirtySurfaces(SDL_Window *window)
+ {
+     SDL_WindowData *windata = (SDL_WindowData *)window->driverdata;
++    SDL_DisplayData *dispdata = (SDL_DisplayData *)SDL_GetDisplayForWindow(window)->driverdata;
+     drmModeModeInfo mode;
+ 
+     /* Can't recreate EGL surfaces right now, need to wait until SwapWindow
+@@ -1181,7 +1279,11 @@
         or SetWindowFullscreen, send a fake event for now since the actual
         recreation is deferred */
      KMSDRM_GetModeToSet(window, &mode);
 -    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED, mode.hdisplay, mode.vdisplay);
-+    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED, mode.vdisplay, mode.hdisplay);
++    if (dispdata->rotated) {
++        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED, mode.vdisplay, mode.hdisplay);
++    } else {
++        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED, mode.hdisplay, mode.vdisplay);
++    }
  }
  
  /* This determines the size of the fb, which comes from the GBM surface
-@@ -1159,13 +1204,13 @@ int KMSDRM_CreateSurfaces(_THIS, SDL_Window *window)
+@@ -1216,14 +1318,20 @@
         mode that's set in sync with what SDL_video.c thinks is set */
      KMSDRM_GetModeToSet(window, &dispdata->mode);
  
 -    display->current_mode.w = dispdata->mode.hdisplay;
 -    display->current_mode.h = dispdata->mode.vdisplay;
-+    display->current_mode.w = dispdata->mode.vdisplay;
-+    display->current_mode.h = dispdata->mode.hdisplay;
++    display->current_mode.w = dispdata->rotated ? dispdata->mode.vdisplay : dispdata->mode.hdisplay;
++    display->current_mode.h = dispdata->rotated ? dispdata->mode.hdisplay : dispdata->mode.vdisplay;
      display->current_mode.refresh_rate = dispdata->mode.vrefresh;
      display->current_mode.format = SDL_PIXELFORMAT_ARGB8888;
  
-     windata->gs = KMSDRM_gbm_surface_create(viddata->gbm_dev,
+-    windata->gs = KMSDRM_gbm_surface_create(viddata->gbm_dev,
 -                                            dispdata->mode.hdisplay, dispdata->mode.vdisplay,
-+                                            dispdata->mode.vdisplay, dispdata->mode.hdisplay,
-                                             surface_fmt, surface_flags);
+-                                            surface_fmt, surface_flags);
++    if (dispdata->rotated) {
++        windata->gs = KMSDRM_gbm_surface_create(viddata->gbm_dev,
++                                                dispdata->mode.vdisplay, dispdata->mode.hdisplay,
++                                                surface_fmt, surface_flags);
++    } else {
++        windata->gs = KMSDRM_gbm_surface_create(viddata->gbm_dev,
++                                                dispdata->mode.hdisplay, dispdata->mode.vdisplay,
++                                                surface_fmt, surface_flags);
++    }
  
      if (!windata->gs) {
-@@ -1189,7 +1234,7 @@ int KMSDRM_CreateSurfaces(_THIS, SDL_Window *window)
+         return SDL_SetError("Could not create GBM surface");
+@@ -1245,8 +1353,13 @@
+     egl_context = (EGLContext)SDL_GL_GetCurrentContext();
      ret = SDL_EGL_MakeCurrent(_this, windata->egl_surface, egl_context);
  
-     SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED,
+-    SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED,
 -                        dispdata->mode.hdisplay, dispdata->mode.vdisplay);
-+                        dispdata->mode.vdisplay, dispdata->mode.hdisplay);
++    if (dispdata->rotated) {
++        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED,
++                            dispdata->mode.vdisplay, dispdata->mode.hdisplay);
++    } else {
++        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED,
++                            dispdata->mode.hdisplay, dispdata->mode.vdisplay);
++    }
  
      windata->egl_surface_dirty = SDL_FALSE;
  
-@@ -1272,8 +1317,8 @@ void KMSDRM_GetDisplayModes(_THIS, SDL_VideoDisplay *display)
+@@ -1304,6 +1417,7 @@
+ 
+     viddata->video_init = SDL_FALSE;
+     viddata->gbm_init = SDL_FALSE;
++    viddata->rotated = KMSDRM_DeviceIsRotated();
+ 
+     /* Get KMSDRM resources info and store what we need. Getting and storing
+        this info isn't a problem for VK compatibility.
+@@ -1363,8 +1477,8 @@
              modedata->mode_index = i;
          }
  
 -        mode.w = conn->modes[i].hdisplay;
 -        mode.h = conn->modes[i].vdisplay;
-+        mode.w = conn->modes[i].vdisplay;
-+        mode.h = conn->modes[i].hdisplay;
++        mode.w = dispdata->rotated ? conn->modes[i].vdisplay : conn->modes[i].hdisplay;
++        mode.h = dispdata->rotated ? conn->modes[i].hdisplay : conn->modes[i].vdisplay;
          mode.refresh_rate = conn->modes[i].vrefresh;
          mode.format = SDL_PIXELFORMAT_ARGB8888;
          mode.driverdata = modedata;
-@@ -1386,6 +1431,13 @@ void KMSDRM_DestroyWindow(_THIS, SDL_Window *window)
+@@ -1477,6 +1591,16 @@
      /*********************************************************************/
      SDL_free(window->driverdata);
      window->driverdata = NULL;
-+        for (int i = 0; i < RGA_BUFFERS_MAX; ++i) {
++
++    if (viddata->rotated) {
++        for (i = 0; i < RGA_BUFFERS_MAX; ++i) {
 +            close(viddata->rga_buffer_prime_fds[i]);
 +        }
 +        if (src_info.fd) {
 +            close(src_info.fd);
 +        }
 +        c_RkRgaDeInit();
++    }
  }
  
  /**********************************************************************/
-@@ -1404,6 +1456,7 @@ int KMSDRM_CreateWindow(_THIS, SDL_Window *window)
-     NativeDisplayType egl_display;
-     drmModeModeInfo *mode;
-     int ret = 0;
-+    SDL_DisplayData *data;
- 
-     /* Allocate window internal data */
-     windata = (SDL_WindowData *)SDL_calloc(1, sizeof(SDL_WindowData));
-@@ -1519,6 +1572,9 @@ int KMSDRM_CreateWindow(_THIS, SDL_Window *window)
+@@ -1616,6 +1740,10 @@
      SDL_SetMouseFocus(window);
      SDL_SetKeyboardFocus(window);
  
-+        data = (SDL_DisplayData *) SDL_GetDisplayForWindow(window)->driverdata;
-+        KMSDRM_InitRotateBuffer(_this, data->mode.hdisplay, data->mode.vdisplay);
-+  
++    if (viddata->rotated) {
++        KMSDRM_InitRotateBuffer(_this, dispdata->mode.hdisplay, dispdata->mode.vdisplay);
++    }
++
      /* Tell the app that the window has moved to top-left. */
-     SDL_SendWindowEvent(window, SDL_WINDOWEVENT_MOVED, 0, 0);
- 
-diff --git a/src/video/kmsdrm/SDL_kmsdrmvideo.h b/src/video/kmsdrm/SDL_kmsdrmvideo.h
-index b48f6ef70..890575fb8 100644
+     {
+         SDL_Rect display_bounds;
 --- a/src/video/kmsdrm/SDL_kmsdrmvideo.h
 +++ b/src/video/kmsdrm/SDL_kmsdrmvideo.h
 @@ -32,6 +32,10 @@
@@ -271,12 +335,17 @@ index b48f6ef70..890575fb8 100644
 +
 +#define RGA_BUFFERS_MAX (3)
  
- typedef struct SDL_VideoData
- {
-@@ -53,6 +57,10 @@ typedef struct SDL_VideoData
+ #ifndef DRM_FORMAT_MOD_INVALID
+ #define DRM_FORMAT_MOD_INVALID 0x00ffffffffffffffULL
+@@ -92,6 +96,15 @@
         open 1 FD and create 1 gbm device. */
      SDL_bool gbm_init;
  
++    /* dArkOS: set once at VideoInit() from /home/ark/.config/.DEVICE.
++       SDL_TRUE selects the RGA-rotated (portrait-panel-in-landscape-housing)
++       code paths; SDL_FALSE runs the stock, non-rotated behavior. */
++    SDL_bool rotated;
++
 +    struct gbm_bo* rga_buffers[RGA_BUFFERS_MAX];
 +    int rga_buffer_prime_fds[RGA_BUFFERS_MAX];
 +    int rga_buffer_index;
@@ -284,3 +353,15 @@ index b48f6ef70..890575fb8 100644
  } SDL_VideoData;
  
  typedef struct SDL_DisplayModeData
+@@ -119,6 +132,11 @@
+     uint64_t cursor_w, cursor_h;
+ 
+     SDL_bool default_cursor_init;
++
++    /* dArkOS: mirrors SDL_VideoData.rotated, copied in KMSDRM_AddDisplay()
++       so kmsdrmmouse.c (which only has dispdata in scope) can see it. */
++    SDL_bool rotated;
++
+ } SDL_DisplayData;
+ 
+ typedef struct SDL_WindowData

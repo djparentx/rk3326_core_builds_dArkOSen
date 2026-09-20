@@ -57,12 +57,6 @@ extension="3200.10"
 	 if [[ ! -z "$sdl2_patches" ]]; then
 	  for patching in sdl2-patch*
 	  do
-		 if [[ $patching == *"odroidgoa"* ]]; then
-		   echo " "
-		   echo "Skipping the $patching for now and making a note to apply that later"
-		   sleep 3
-		   sdl2_rotationpatch="yes"
-		 else
 		   patch -Np1 < "$patching"
 		   if [[ $? != "0" ]]; then
 			echo " "
@@ -70,7 +64,6 @@ extension="3200.10"
 			exit 1
 		   fi
 		   rm "$patching"
-		 fi
 	  done
 	 fi
 
@@ -175,41 +168,4 @@ extension="3200.10"
     if [[ $bitness == "64" ]]; then
        cd ..
     fi
-
-    if [[ $sdl2_rotationpatch == "yes" ]]; then
-	  for patching in sdl2-patch*
-	  do
-	    patch -Np1 < "$patching"
-		if [[ $? != "0" ]]; then
-		  echo " "
-		  echo "There was an error while applying $patching.  Stopping here."
-		  exit 1
-		fi
-		rm "$patching"
-	  done
-	fi
-
-    if [[ $bitness == "64" ]]; then
-       cd build
-    fi
-
-      #make clean
-	  make -j$(nproc)
-
-	  if [[ $? != "0" ]]; then
-		echo " "
-		echo "There was an error while building sdl2 at commit $commit with the rotation patch applied.  Stopping here."
-		exit 1
-	  fi
-
-      if [[ $bitness == "32" ]]; then
-	     strip build/.libs/libSDL2-2.0.so.0.$extension
-	     cp build/.libs/libSDL2-2.0.so.0.$extension $cur_wd/sdl2-$bitness/libSDL2-2.0.so.0.$extension.rotated
-	  else
-	     strip libSDL2-2.0.so.0.$extension
-	     cp libSDL2-2.0.so.0.$extension $cur_wd/sdl2-$bitness/libSDL2-2.0.so.0.$extension.rotated
-      fi
-
-	  echo " "
-	  echo "sdl $(git describe --tags | cut -c 9-) with rotation has been created and has been placed in the rk3326_core_builds/sdl2-$bitness subfolder"
 

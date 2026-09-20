@@ -1,28 +1,36 @@
-diff -rupN SDL2.orig/src/video/kmsdrm/SDL_kmsdrmmouse.c SDL2/src/video/kmsdrm/SDL_kmsdrmmouse.c
---- SDL2.orig/src/video/kmsdrm/SDL_kmsdrmmouse.c	2023-07-01 17:04:05.000000000 +0000
-+++ SDL2/src/video/kmsdrm/SDL_kmsdrmmouse.c	2023-07-26 10:27:12.232726116 +0000
-@@ -150,6 +150,7 @@ static int KMSDRM_DumpCursorToBO(SDL_Vid
+--- a/src/video/kmsdrm/SDL_kmsdrmmouse.c
++++ b/src/video/kmsdrm/SDL_kmsdrmmouse.c
+@@ -150,6 +150,7 @@
      uint8_t *src_row;
  
      int i;
 +    int j;
      int ret;
  
-     if (curdata == NULL || !dispdata->cursor_bo) {
-@@ -170,8 +171,10 @@ static int KMSDRM_DumpCursorToBO(SDL_Vid
+     if (!curdata || !dispdata->cursor_bo) {
+@@ -169,9 +170,18 @@
+     }
  
      /* Copy from the cursor buffer to a buffer that we can dump to the GBM BO. */
-     for (i = 0; i < curdata->h; i++) {
+-    for (i = 0; i < curdata->h; i++) {
 -        src_row = &((uint8_t *)curdata->buffer)[i * curdata->w * 4];
 -        SDL_memcpy(ready_buffer + (i * bo_stride), src_row, (size_t)4 * curdata->w);
-+        for (j = 0; j < curdata->w; j++) {
-+            uint32_t src_pixel = ((uint32_t*)curdata->buffer)[i * curdata->w + j];
-+            SDL_memcpy(ready_buffer + ((curdata->w - j + 1) * bo_stride) + i, &src_pixel, 4);
++    if (dispdata->rotated) {
++        for (i = 0; i < curdata->h; i++) {
++            for (j = 0; j < curdata->w; j++) {
++                uint32_t src_pixel = ((uint32_t*)curdata->buffer)[i * curdata->w + j];
++                SDL_memcpy(ready_buffer + ((curdata->w - j + 1) * bo_stride) + i, &src_pixel, 4);
++            }
++        }
++    } else {
++        for (i = 0; i < curdata->h; i++) {
++            src_row = &((uint8_t *)curdata->buffer)[i * curdata->w * 4];
++            SDL_memcpy(ready_buffer + (i * bo_stride), src_row, (size_t)4 * curdata->w);
 +        }
      }
  
      /* Dump the cursor buffer to our GBM BO. */
-@@ -370,6 +373,7 @@ static int KMSDRM_WarpMouseGlobal(int x,
+@@ -370,6 +380,7 @@
  
          SDL_Window *window = mouse->focus;
          SDL_DisplayData *dispdata = (SDL_DisplayData *)SDL_GetDisplayForWindow(window)->driverdata;
@@ -30,16 +38,20 @@ diff -rupN SDL2.orig/src/video/kmsdrm/SDL_kmsdrmmouse.c SDL2/src/video/kmsdrm/SD
  
          /* Update internal mouse position. */
          SDL_SendMouseMotion(mouse->focus, mouse->mouseID, 0, x, y);
-@@ -378,7 +382,7 @@ static int KMSDRM_WarpMouseGlobal(int x,
+@@ -378,7 +389,11 @@
          if (dispdata->cursor_bo) {
              int ret = 0;
  
 -            ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, x, y);
-+            ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, y, dispdata->mode.vdisplay + curdata->w - x);
++            if (dispdata->rotated) {
++                ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, y, dispdata->mode.vdisplay + curdata->w - x);
++            } else {
++                ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, x, y);
++            }
  
              if (ret) {
                  SDL_SetError("drmModeMoveCursor() failed.");
-@@ -432,13 +436,14 @@ static void KMSDRM_MoveCursor(SDL_Cursor
+@@ -432,13 +447,18 @@
  
          SDL_Window *window = mouse->focus;
          SDL_DisplayData *dispdata = (SDL_DisplayData *)SDL_GetDisplayForWindow(window)->driverdata;
@@ -51,8 +63,11 @@ diff -rupN SDL2.orig/src/video/kmsdrm/SDL_kmsdrmmouse.c SDL2/src/video/kmsdrm/SD
          }
  
 -        ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, mouse->x, mouse->y);
-+        ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, mouse->y, dispdata->mode.vdisplay - curdata->w - mouse->x);
++        if (dispdata->rotated) {
++            ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, mouse->y, dispdata->mode.vdisplay - curdata->w - mouse->x);
++        } else {
++            ret = KMSDRM_drmModeMoveCursor(dispdata->cursor_bo_drm_fd, dispdata->crtc->crtc_id, mouse->x, mouse->y);
++        }
  
          if (ret) {
              SDL_SetError("drmModeMoveCursor() failed.");
-Binary files SDL2.orig/src/video/kmsdrm/.SDL_kmsdrmmouse.c.rej.swp and SDL2/src/video/kmsdrm/.SDL_kmsdrmmouse.c.rej.swp differ
