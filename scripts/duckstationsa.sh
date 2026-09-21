@@ -56,8 +56,8 @@ bitness="$(getconf LONG_BIT)"
 	 cd duckstation
      git checkout 5ab5070d73f1acc51e064bd96be4ba6ce3c06f5c
 
-	cp mali/shims/gbm_shim.c src/duckstation-nogui/.
-	cp mali/shims/wayland_egl_shim.c src/duckstation-nogui/.
+	cp "$cur_wd/mali/shims/gbm_shim.c" src/duckstation-nogui/.
+	cp "$cur_wd/mali/shims/wayland_egl_shim.c" src/duckstation-nogui/.
 	 
 	 duckstationsa_patches=$(find *.patch)
 	 
