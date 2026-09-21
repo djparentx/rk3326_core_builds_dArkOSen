@@ -1,4 +1,4 @@
-name: Build Flycast Standalone (aarch64)
+name: Build Flycast Standalone (runtime rotate)
 
 on:
   workflow_dispatch:
