@@ -31,7 +31,6 @@ TAG="v2.6"
 	 cd flycast/
 	 git checkout ${TAG}
 	 git submodule update --init --depth 1
-	 sed -i 's/\-O[23]/-Ofast/' CMakeLists.txt
 	 
 	 flycastsa_patches=$(find *.patch)
 	 
@@ -65,8 +64,8 @@ TAG="v2.6"
 	    -DCMAKE_RULE_MESSAGES=OFF \
 	    -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
 	    -DCMAKE_BUILD_TYPE="Release" \
-	    -DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
-	    -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG" \
+	    -DCMAKE_C_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG" \
+	    -DCMAKE_CXX_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG" \
 	    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
 	    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 	    -DWITH_SYSTEM_ZLIB=ON \
