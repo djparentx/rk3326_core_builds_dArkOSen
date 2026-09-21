@@ -1,7 +1,6 @@
 name: Build DuckStation Standalone (aarch64) - runtime rotation
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:
