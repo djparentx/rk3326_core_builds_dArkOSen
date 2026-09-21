@@ -1,0 +1,79 @@
+--- a/src/duckstation-nogui/nogui_host_interface.cpp
++++ b/src/duckstation-nogui/nogui_host_interface.cpp
+@@ -20,8 +20,55 @@
+ #include "imgui_stdlib.h"
+ #include <cinttypes>
+ #include <cmath>
++#include <cstdio>
++#include <cstring>
++#include <cctype>
+ Log_SetChannel(NoGUIHostInterface);
+ 
++/* dArkOSen: rotation is decided at runtime, not at compile time. When
++ * /home/ark/.config/.DEVICE contains "rotated" (case-insensitive, same
++ * convention as the dArkOSen RetroArch/Kodi builds), this forces a 270
++ * degree rotation regardless of the settings.ini value. Checked once
++ * and cached. */
++#define DUCKSTATION_DEVICE_FLAG_FILE "/home/ark/.config/.DEVICE"
++#define DUCKSTATION_DEVICE_FLAG_TAG "rotated"
++
++static bool DuckStationDeviceIsRotated()
++{
++  static bool checked = false;
++  static bool rotated = false;
++
++  if (!checked)
++  {
++    char buf[256];
++    std::FILE* f = std::fopen(DUCKSTATION_DEVICE_FLAG_FILE, "r");
++    checked = true;
++
++    if (f)
++    {
++      size_t len = std::fread(buf, 1, sizeof(buf) - 1, f);
++      std::fclose(f);
++      buf[len] = '\0';
++
++      const size_t tag_len = std::strlen(DUCKSTATION_DEVICE_FLAG_TAG);
++      for (size_t i = 0; buf[i] != '\0' && !rotated; i++)
++      {
++        size_t j;
++        for (j = 0; j < tag_len && buf[i + j] != '\0'; j++)
++        {
++          if (std::tolower(static_cast<unsigned char>(buf[i + j])) !=
++              std::tolower(static_cast<unsigned char>(DUCKSTATION_DEVICE_FLAG_TAG[j])))
++            break;
++        }
++        if (j == tag_len)
++          rotated = true;
++      }
++    }
++  }
++
++  return rotated;
++}
++
+ #ifdef _WIN32
+ #include "frontend-common/d3d11_host_display.h"
+ #include "frontend-common/d3d12_host_display.h"
+@@ -140,11 +187,15 @@
+     return false;
+   }
+ 
+-  switch(g_settings.display_rotate & 3)
+-  {
+-    case 1: m_display->SetDisplayRotation(HostDisplay::Rotation::R90Degrees);
+-    case 2: m_display->SetDisplayRotation(HostDisplay::Rotation::R180Degrees);
+-    case 3: m_display->SetDisplayRotation(HostDisplay::Rotation::R270Degrees);
++  s8 display_rotate = g_settings.display_rotate;
++  if (DuckStationDeviceIsRotated())
++    display_rotate = 3;
++
++  switch (display_rotate & 3)
++  {
++    case 1: m_display->SetDisplayRotation(HostDisplay::Rotation::R90Degrees); break;
++    case 2: m_display->SetDisplayRotation(HostDisplay::Rotation::R180Degrees); break;
++    case 3: m_display->SetDisplayRotation(HostDisplay::Rotation::R270Degrees); break;
+     case 0:
+     default: break;
+   }
