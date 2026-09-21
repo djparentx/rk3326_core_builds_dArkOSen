@@ -1,4 +1,4 @@
-name: Build DuckStation Standalone (runtime rotation)
+name: Build DuckStation Standalone (runtime rotate)
 
 on:
   workflow_dispatch:
@@ -38,7 +38,8 @@ jobs:
       - name: Upload built DuckStation binary
         uses: actions/upload-artifact@v4
         with:
-          name: duckstationsa-runtime-rotation
+          name: duckstationsa-runtime-rotate
+          if-no-files-found: error
           path: |
             duckstationsa-64/duckstation-nogui
             duckstationsa-64/duckstationsa_pkg_*.tar.gz

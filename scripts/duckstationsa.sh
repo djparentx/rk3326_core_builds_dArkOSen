@@ -119,7 +119,17 @@ bitness="$(getconf LONG_BIT)"
 	       fi
 
 	       cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstation-nogui
-           tar -zchvf ../../duckstationsa-$bitness/duckstationsa_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz bin/duckstation-nogui ../data/database/ ../data/resources/ ../data/shaders/ 
+	       if [[ $? != "0" ]]; then
+		     echo " "
+		     echo "There was an error copying the duckstation-nogui binary.  Stopping here."
+	         exit 1
+	       fi
+           tar -zchvf ../../duckstationsa-$bitness/duckstationsa_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz bin/duckstation-nogui ../data/database/ ../data/resources/ ../data/shaders/
+	       if [[ $? != "0" ]]; then
+		     echo " "
+		     echo "There was an error packaging the duckstation-nogui tarball.  Stopping here."
+	         exit 1
+	       fi
 
 	       echo " "
 	       echo "The duckstation standalone executable has been created and has been placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
