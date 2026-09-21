@@ -1,4 +1,4 @@
-name: Build DuckStation Standalone (aarch64) - runtime rotation
+name: Build DuckStation Standalone (runtime rotation)
 
 on:
   workflow_dispatch:
