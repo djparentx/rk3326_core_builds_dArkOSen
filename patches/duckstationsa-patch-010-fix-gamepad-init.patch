@@ -1,6 +1,8 @@
 --- a/src/frontend-common/sdl_controller_interface.cpp
 +++ b/src/frontend-common/sdl_controller_interface.cpp
-@@ -62,6 +62,19 @@
+@@ -60,10 +60,23 @@
+     return false;
+   }
  
    // we should open the controllers as the connected events come in, so no need to do any more here
    m_sdl_subsystem_initialized = true;
@@ -17,4 +19,8 @@
 +      OpenJoystick(i);
 +  }
 +
-   return true;\n }
+   return true;
+ }
+ 
+ void SDLControllerInterface::Shutdown()
+ {
