@@ -112,7 +112,7 @@ bitness="$(getconf LONG_BIT)"
 		     echo "There was an error that occured while making the duckstation standalone.  Stopping here."
              exit 1
            fi
-           # strip bin/duckstation-nogui  # TEMP: disabled for debug symbols, revert after gdb backtrace
+           strip bin/duckstation-nogui
 
            if [ ! -d "../../duckstationsa-$bitness/" ]; then
 		     mkdir -v ../../duckstationsa-$bitness
@@ -156,7 +156,7 @@ bitness="$(getconf LONG_BIT)"
 		     echo "There was an error that occured while making the duckstation standalone.  Stopping here."
              exit 1
            fi
-           # strip bin/duckstation-nogui  # TEMP: disabled for debug symbols, revert after gdb backtrace
+           bin/duckstation-nogui
 
            if [ ! -d "../../duckstationsa-$bitness/" ]; then
 		     mkdir -v ../../duckstationsa-$bitness
