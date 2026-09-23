@@ -81,146 +81,147 @@ bitness="$(getconf LONG_BIT)"
 	  done
 	  fi
 
-	   mkdir -p build-a35
-	   cd build-a35
-	   rm -f CMakeCache.txt
-	   cmake -DANDROID=OFF \
-			   -DENABLE_DISCORD_PRESENCE=OFF \
-			   -DUSE_X11=OFF \
-			   -DBUILD_QT_FRONTEND=OFF \
-			   -DBUILD_NOGUI_FRONTEND=ON \
-			   -DCMAKE_BUILD_TYPE=Release \
-			   -DBUILD_SHARED_LIBS=OFF \
-			   -DUSE_SDL2=ON \
-			   -DENABLE_CHEEVOS=ON \
-			   -DUSE_FBDEV=OFF \
-			   -DUSE_EVDEV=ON \
-			   -DUSE_EGL=ON \
-			   -DUSE_DRMKMS=ON \
-			   -DUSE_MALI=OFF \
-			   -DCMAKE_C_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -DNDEBUG" \
-			   -DCMAKE_CXX_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -DNDEBUG" \
-			   ..
-	   if [[ $? != "0" ]]; then
-			   echo " "
-			   echo "There was an error that occured while configuring duckstation standalone (a35).  Stopping here."
-		   exit 1
-	   fi
+	 if [ ! -d "build" ]; then
+           mkdir -p build-a35
+           cd build-a35
+           rm -f CMakeCache.txt
+           cmake -DANDROID=OFF \
+	               -DENABLE_DISCORD_PRESENCE=OFF \
+	               -DUSE_X11=OFF \
+	               -DBUILD_QT_FRONTEND=OFF \
+	               -DBUILD_NOGUI_FRONTEND=ON \
+	               -DCMAKE_BUILD_TYPE=Release \
+	               -DBUILD_SHARED_LIBS=OFF \
+	               -DUSE_SDL2=ON \
+	               -DENABLE_CHEEVOS=ON \
+                   -DUSE_FBDEV=OFF \
+                   -DUSE_EVDEV=ON \
+                   -DUSE_EGL=ON \
+                   -DUSE_DRMKMS=ON \
+                   -DUSE_MALI=OFF \
+                   -DCMAKE_C_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -DNDEBUG" \
+                   -DCMAKE_CXX_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -DNDEBUG" \
+                   ..
+           if [[ $? != "0" ]]; then
+			       echo " "
+			       echo "There was an error that occured while configuring duckstation standalone (a35).  Stopping here."
+               exit 1
+           fi
 
-	   make -j$(nproc)
-	   if [[ $? != "0" ]]; then
-			 echo " "
-			 echo "There was an error that occured while making duckstation standalone (a35).  Stopping here."
-		 exit 1
-	   fi
-	   strip bin/duckstation-nogui
+           make -j$(nproc)
+           if [[ $? != "0" ]]; then
+			     echo " "
+			     echo "There was an error that occured while making duckstation standalone (a35).  Stopping here."
+             exit 1
+           fi
+           strip bin/duckstation-nogui
 
-	   if [ ! -d "../../duckstationsa-$bitness/" ]; then
-			 mkdir -v ../../duckstationsa-$bitness
-		   fi
+           if [ ! -d "../../duckstationsa-$bitness/" ]; then
+			     mkdir -v ../../duckstationsa-$bitness
+		       fi
 
-	   cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstationsa-a35
-	   if [[ $? != "0" ]]; then
-			 echo " "
-			 echo "There was an error copying the duckstationsa-a35 binary.  Stopping here."
-			 exit 1
-	   fi
-	   tar -zchvf ../../duckstationsa-$bitness/duckstationsa-a35_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz bin/duckstation-nogui ../data/database/ ../data/resources/ ../data/shaders/
-	   if [[ $? != "0" ]]; then
-			 echo " "
-			 echo "There was an error packaging the duckstationsa-a35 tarball.  Stopping here."
-			 exit 1
-	   fi
+	       cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstationsa-a35
+	       if [[ $? != "0" ]]; then
+			     echo " "
+			     echo "There was an error copying the duckstationsa-a35 binary.  Stopping here."
+		         exit 1
+	       fi
+           tar -zchvf ../../duckstationsa-$bitness/duckstationsa-a35_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz bin/duckstation-nogui ../data/database/ ../data/resources/ ../data/shaders/
+	       if [[ $? != "0" ]]; then
+			     echo " "
+			     echo "There was an error packaging the duckstationsa-a35 tarball.  Stopping here."
+		         exit 1
+	       fi
 
-	   echo " "
-	   echo "duckstationsa-a35 has been created and placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
+	       echo " "
+	       echo "duckstationsa-a35 has been created and placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
 
-	   cd ..
+           cd ..
 
-	   mkdir -p build-generic
-	   cd build-generic
-	   rm -f CMakeCache.txt
-	   cmake -DANDROID=OFF \
-			   -DENABLE_DISCORD_PRESENCE=OFF \
-			   -DUSE_X11=OFF \
-			   -DBUILD_QT_FRONTEND=OFF \
-			   -DBUILD_NOGUI_FRONTEND=ON \
-			   -DCMAKE_BUILD_TYPE=Release \
-			   -DBUILD_SHARED_LIBS=OFF \
-			   -DUSE_SDL2=ON \
-			   -DENABLE_CHEEVOS=ON \
-			   -DUSE_FBDEV=OFF \
-			   -DUSE_EVDEV=ON \
-			   -DUSE_EGL=ON \
-			   -DUSE_DRMKMS=ON \
-			   -DUSE_MALI=OFF \
-			   -DCMAKE_C_FLAGS="-Ofast -march=armv8-a+crc -DNDEBUG" \
-			   -DCMAKE_CXX_FLAGS="-Ofast -march=armv8-a+crc -DNDEBUG" \
-			   ..
-	   if [[ $? != "0" ]]; then
-			   echo " "
-			   echo "There was an error that occured while configuring duckstation standalone (generic).  Stopping here."
-		   exit 1
-	   fi
+           mkdir -p build-generic
+           cd build-generic
+           rm -f CMakeCache.txt
+           cmake -DANDROID=OFF \
+	               -DENABLE_DISCORD_PRESENCE=OFF \
+	               -DUSE_X11=OFF \
+	               -DBUILD_QT_FRONTEND=OFF \
+	               -DBUILD_NOGUI_FRONTEND=ON \
+	               -DCMAKE_BUILD_TYPE=Release \
+	               -DBUILD_SHARED_LIBS=OFF \
+	               -DUSE_SDL2=ON \
+	               -DENABLE_CHEEVOS=ON \
+                   -DUSE_FBDEV=OFF \
+                   -DUSE_EVDEV=ON \
+                   -DUSE_EGL=ON \
+                   -DUSE_DRMKMS=ON \
+                   -DUSE_MALI=OFF \
+                   -DCMAKE_C_FLAGS="-Ofast -march=armv8-a+crc -DNDEBUG" \
+                   -DCMAKE_CXX_FLAGS="-Ofast -march=armv8-a+crc -DNDEBUG" \
+                   ..
+           if [[ $? != "0" ]]; then
+			       echo " "
+			       echo "There was an error that occured while configuring duckstation standalone (generic).  Stopping here."
+               exit 1
+           fi
 
-	   make -j$(nproc)
-	   if [[ $? != "0" ]]; then
-			 echo " "
-			 echo "There was an error that occured while making duckstation standalone (generic).  Stopping here."
-		 exit 1
-	   fi
-	   strip bin/duckstation-nogui
+           make -j$(nproc)
+           if [[ $? != "0" ]]; then
+			     echo " "
+			     echo "There was an error that occured while making duckstation standalone (generic).  Stopping here."
+             exit 1
+           fi
+           strip bin/duckstation-nogui
 
-	   if [ ! -d "../../duckstationsa-$bitness/" ]; then
-			 mkdir -v ../../duckstationsa-$bitness
-		   fi
+           if [ ! -d "../../duckstationsa-$bitness/" ]; then
+			     mkdir -v ../../duckstationsa-$bitness
+		       fi
 
-	   cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstationsa-generic
-	   if [[ $? != "0" ]]; then
-			 echo " "
-			 echo "There was an error copying the duckstationsa-generic binary.  Stopping here."
-			 exit 1
-	   fi
-	   tar -zchvf ../../duckstationsa-$bitness/duckstationsa-generic_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz bin/duckstation-nogui ../data/database/ ../data/resources/ ../data/shaders/
-	   if [[ $? != "0" ]]; then
-			 echo " "
-			 echo "There was an error packaging the duckstationsa-generic tarball.  Stopping here."
-			 exit 1
-	   fi
+	       cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstationsa-generic
+	       if [[ $? != "0" ]]; then
+			     echo " "
+			     echo "There was an error copying the duckstationsa-generic binary.  Stopping here."
+		         exit 1
+	       fi
+           tar -zchvf ../../duckstationsa-$bitness/duckstationsa-generic_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz bin/duckstation-nogui ../data/database/ ../data/resources/ ../data/shaders/
+	       if [[ $? != "0" ]]; then
+			     echo " "
+			     echo "There was an error packaging the duckstationsa-generic tarball.  Stopping here."
+		         exit 1
+	       fi
 
-	   echo " "
-	   echo "duckstationsa-generic has been created and placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
+	       echo " "
+	       echo "duckstationsa-generic has been created and placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
 
-		if [[ $chikey_patch == "yes" ]]; then
-		  cd ..
-		  for patching in duckstationsa-patch*
-		  do
-			git checkout src/frontend-common/sdl_controller_interface.cpp
-			patch -Np1 < "$patching"
-			if [[ $? != "0" ]]; then
-			  echo " "
-			  echo "There was an error while applying $patching.  Stopping here."
-			  exit 1
-			fi
-			rm "$patching"
-		  done
-		fi
+            if [[ $chikey_patch == "yes" ]]; then
+              cd ..
+        	  for patching in duckstationsa-patch*
+        	  do
+                git checkout src/frontend-common/sdl_controller_interface.cpp
+        	    patch -Np1 < "$patching"
+        		if [[ $? != "0" ]]; then
+        		  echo " "
+        		  echo "There was an error while applying $patching.  Stopping here."
+        		  exit 1
+        		fi
+        		rm "$patching"
+        	  done
+        	fi
 
-	   cd build
-	   make -j$(nproc)
-	   if [[ $? != "0" ]]; then
-		 echo " "
-		 echo "There was an error that occured while making the duckstation standalone.  Stopping here."
-		 exit 1
-	   fi
-	   bin/duckstation-nogui
+           cd build
+           make -j$(nproc)
+           if [[ $? != "0" ]]; then
+		     echo " "
+		     echo "There was an error that occured while making the duckstation standalone.  Stopping here."
+             exit 1
+           fi
+           bin/duckstation-nogui
 
-	   if [ ! -d "../../duckstationsa-$bitness/" ]; then
-		 mkdir -v ../../duckstationsa-$bitness
-	   fi
+           if [ ! -d "../../duckstationsa-$bitness/" ]; then
+		     mkdir -v ../../duckstationsa-$bitness
+	       fi
 
-	   cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstation-nogui.chirgb10
-	   
-	   echo " "
-	   echo "The duckstation standalone executable for the chi and rgb10 has been created and has been placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
+	       cp bin/duckstation-nogui ../../duckstationsa-$bitness/duckstation-nogui.chirgb10
+	       
+	       echo " "
+	       echo "The duckstation standalone executable for the chi and rgb10 has been created and has been placed in the rk3326_core_builds/duckstationsa-$bitness subfolder"
 	fi
