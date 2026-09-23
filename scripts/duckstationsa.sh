@@ -12,18 +12,6 @@
 cur_wd="$PWD"
 bitness="$(getconf LONG_BIT)"
 
-if [[ "$bitness" == "32" ]]; then
-  archtest="arm-linux-gnueabihf"
-else
-  archtest="aarch64-linux-gnu"
-fi
-if [ ! -d "/usr/local/lib/${archtest}/" ]; then
-  mkdir -p /usr/local/lib/${archtest}/
-fi
-
-	# Duckstation standalone package
-	if [[ "$var" == "duckstationsa" ]] && [[ "$bitness" == "64" ]]; then
-
 	# Duckstation standalone package
 	if [[ "$var" == "duckstationsa" ]] && [[ "$bitness" == "64" ]]; then
 	 cd $cur_wd
