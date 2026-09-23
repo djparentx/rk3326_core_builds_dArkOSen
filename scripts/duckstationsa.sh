@@ -18,9 +18,6 @@ fi
 
 	# Duckstation standalone package
 	if [[ "$var" == "duckstationsa" ]] && [[ "$bitness" == "64" ]]; then
-
-	# Duckstation standalone package
-	if [[ "$var" == "duckstationsa" ]] && [[ "$bitness" == "64" ]]; then
 	 cd $cur_wd
 
 	  # Now we'll start the clone and build of duckstation
