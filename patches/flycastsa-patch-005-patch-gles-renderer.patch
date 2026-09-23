@@ -1,0 +1,21 @@
+diff --git a/core/hw/pvr/Renderer_if.cpp b/core/hw/pvr/Renderer_if.cpp
+index 0000000..0000000 100644
+--- a/core/hw/pvr/Renderer_if.cpp
++++ b/core/hw/pvr/Renderer_if.cpp
+@@ -424,16 +424,16 @@ static void rend_create_renderer()
+     switch (config::RendererType)
+     {
+ default:
+-#ifdef USE_OPENGL
++#if defined(USE_OPENGL) || defined(GLES)
+     case RenderType::OpenGL:
+         renderer = rend_GLES2();
+         break;
++#endif
++#ifdef USE_OPENGL
+ #if !defined(GLES2) && !defined(__APPLE__)
+     case RenderType::OpenGL_OIT:
+         renderer = rend_GL4();
+         break;
+ #endif
+ #endif
