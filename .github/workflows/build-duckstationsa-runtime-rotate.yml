@@ -15,7 +15,7 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Build DuckStation in aarch64 Debian Trixie container
+      - name: Build DuckStation (a35 tuned) in aarch64 Debian Trixie container
         run: |
           docker run --rm --platform linux/arm64 \
             -v ${{ github.workspace }}:/workspace \
@@ -28,18 +28,46 @@ jobs:
                 libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
                 libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
                 libzip-dev liblzma-dev
-              export CXXFLAGS='-include cstdarg -include cstdio'
+              mkdir -p /usr/local/lib/aarch64-linux-gnu
+              export CFLAGS='-Ofast -march=armv8-a+crc -mtune=cortex-a35'
+              export CXXFLAGS='-Ofast -march=armv8-a+crc -mtune=cortex-a35 -include cstdarg -include cstdio'
               ./builds.sh duckstationsa
             "
+          mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-a35
+          mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-a35_pkg.tar.gz
+          rm -rf duckstation build
+
+      - name: Build DuckStation (generic) in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
+                libzip-dev liblzma-dev
+              mkdir -p /usr/local/lib/aarch64-linux-gnu
+              export CFLAGS='-Ofast -march=armv8-a+crc'
+              export CXXFLAGS='-Ofast -march=armv8-a+crc -include cstdarg -include cstdio'
+              ./builds.sh duckstationsa
+            "
+          mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-generic
+          mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-generic_pkg.tar.gz
 
       - name: Debug - list build output
-        run: find . -iname "duckstation-nogui*" -o -iname "duckstationsa-64*"
+        run: find . -iname "duckstationsa-64*"
 
-      - name: Upload built DuckStation binary
+      - name: Upload built DuckStation binaries
         uses: actions/upload-artifact@v4
         with:
           name: duckstationsa-runtime-rotate
           if-no-files-found: error
           path: |
-            duckstationsa-64/duckstation-nogui
-            duckstationsa-64/duckstationsa_pkg_*.tar.gz
+            duckstationsa-64/duckstationsa-a35
+            duckstationsa-64/duckstationsa-a35_pkg.tar.gz
+            duckstationsa-64/duckstationsa-generic
+            duckstationsa-64/duckstationsa-generic_pkg.tar.gz
