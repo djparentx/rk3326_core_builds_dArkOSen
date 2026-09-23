@@ -33,10 +33,9 @@ jobs:
               export CXXFLAGS='-Ofast -march=armv8-a+crc -mtune=cortex-a35 -include cstdarg -include cstdio'
               ./builds.sh duckstationsa
             "
-          sudo chown -R "$(id -u):$(id -g)" duckstationsa-64
-          mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-a35
-          mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-a35_pkg.tar.gz
-          rm -rf duckstation build
+          sudo mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-a35
+          sudo mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-a35_pkg.tar.gz
+          sudo rm -rf duckstation build
 
       - name: Build DuckStation (generic) in aarch64 Debian Trixie container
         run: |
@@ -56,9 +55,8 @@ jobs:
               export CXXFLAGS='-Ofast -march=armv8-a+crc -include cstdarg -include cstdio'
               ./builds.sh duckstationsa
             "
-          sudo chown -R "$(id -u):$(id -g)" duckstationsa-64
-          mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-generic
-          mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-generic_pkg.tar.gz
+          sudo mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-generic
+          sudo mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-generic_pkg.tar.gz
 
       - name: Debug - list build output
         run: find . -iname "duckstationsa-64*"

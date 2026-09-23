@@ -1,7 +1,7 @@
 diff --git a/core/hw/pvr/Renderer_if.cpp b/core/hw/pvr/Renderer_if.cpp
 --- a/core/hw/pvr/Renderer_if.cpp
 +++ b/core/hw/pvr/Renderer_if.cpp
-@@ -424,17 +424,17 @@ static void rend_create_renderer()
+@@ -424,18 +424,18 @@ static void rend_create_renderer()
      switch (config::RendererType)
      {
  default:
