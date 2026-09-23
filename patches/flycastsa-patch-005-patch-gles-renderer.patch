@@ -1,5 +1,4 @@
 diff --git a/core/hw/pvr/Renderer_if.cpp b/core/hw/pvr/Renderer_if.cpp
-index 0000000..0000000 100644
 --- a/core/hw/pvr/Renderer_if.cpp
 +++ b/core/hw/pvr/Renderer_if.cpp
 @@ -424,16 +424,16 @@ static void rend_create_renderer()
