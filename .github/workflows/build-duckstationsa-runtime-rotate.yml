@@ -29,7 +29,6 @@ jobs:
                 libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
                 libzip-dev liblzma-dev
               export CXXFLAGS='-include cstdarg -include cstdio'
-              mkdir -p /usr/local/lib/aarch64-linux-gnu
               ./builds.sh duckstationsa
             "
 
@@ -42,7 +41,5 @@ jobs:
           name: duckstationsa-runtime-rotate
           if-no-files-found: error
           path: |
-            duckstationsa-64/duckstationsa-a35
-            duckstationsa-64/duckstationsa-a35_pkg_*.tar.gz
-            duckstationsa-64/duckstationsa-generic
-            duckstationsa-64/duckstationsa-generic_pkg_*.tar.gz
+            duckstationsa-64/duckstation-nogui
+            duckstationsa-64/duckstationsa_pkg_*.tar.gz
