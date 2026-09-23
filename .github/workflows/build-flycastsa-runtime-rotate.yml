@@ -43,9 +43,6 @@ jobs:
               ccache --show-stats
             "
 
-      - name: Debug - list build output
-        run: find . -iname "flycast-rk3326"
-
       - name: Upload built Flycast binary
         uses: actions/upload-artifact@v4
         with:
