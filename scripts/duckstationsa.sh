@@ -11,12 +11,7 @@
 
 cur_wd="$PWD"
 bitness="$(getconf LONG_BIT)"
-
-if [[ "$bitness" == "32" ]]; then
-  archtest="arm-linux-gnueabihf"
-else
-  archtest="aarch64-linux-gnu"
-fi
+archtest="aarch64-linux-gnu"
 if [ ! -d "/usr/local/lib/${archtest}/" ]; then
   mkdir -p /usr/local/lib/${archtest}/
 fi
