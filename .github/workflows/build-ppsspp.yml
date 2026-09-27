@@ -1,0 +1,65 @@
+name: Build PPSSPP Standalone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ppsspp-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build PPSSPP Vulkan in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config clang \
+                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libx11-dev libsm-dev libxext-dev libudev-dev libasound2-dev \
+                libfreetype6-dev mercurial zlib1g-dev
+              ./builds.sh ppsspp
+              mv ppsspp64/PPSSPPSDL ppsspp64/PPSSPPSDL-vulkan
+              mv ppsspp64/ppssppsdl_pkg_*.tar.gz ppsspp64/ppssppsdl-vulkan_pkg.tar.gz
+            "
+
+      - name: Build PPSSPP GLES2 fallback in aarch64 Debian Trixie container
+        run: |
+          rm -rf ppsspp
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config clang \
+                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libx11-dev libsm-dev libxext-dev libudev-dev libasound2-dev \
+                libfreetype6-dev mercurial zlib1g-dev
+              sed -i 's/-DVULKAN=ON/-DVULKAN=OFF/' scripts/ppsspp.sh
+              ./builds.sh ppsspp
+              mv ppsspp64/PPSSPPSDL ppsspp64/PPSSPPSDL-gles2
+              mv ppsspp64/ppssppsdl_pkg_*.tar.gz ppsspp64/ppssppsdl-gles2_pkg.tar.gz
+            "
+
+      - name: Upload PPSSPP artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ppsspp-standalone
+          if-no-files-found: error
+          path: |
+            ppsspp64/PPSSPPSDL-vulkan
+            ppsspp64/ppssppsdl-vulkan_pkg.tar.gz
+            ppsspp64/PPSSPPSDL-gles2
+            ppsspp64/ppssppsdl-gles2_pkg.tar.gz
