@@ -100,7 +100,7 @@ TAG="v1.20.4"
 		-DUSE_MINIUPNPC=OFF \
 		-DUSING_QT_UI=OFF \
 		-DUSE_DISCORD=OFF \
-		-DCMAKE_EXE_LINKER_FLAGS="-lgbm -lwayland-egl" \
+		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--allow-shlib-undefined" \
 		../.
 	  make -j$(nproc)
 
