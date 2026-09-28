@@ -30,8 +30,8 @@ TAG="v2.6"
 
 	 cd flycast/
 	 git checkout ${TAG}
-	 git submodule update --init --recursive --depth 1	 
-
+	 git submodule update --init --depth 1
+	 
 	 flycastsa_patches=$(find *.patch)
 	 
 	 if [[ ! -z "$flycastsa_patches" ]]; then
