@@ -88,19 +88,19 @@ TAG="v1.20.4"
 		-DUSE_SYSTEM_LIBPNG=OFF \
 		-DVULKAN=OFF \
   		-DSDL2_LIBRARY="/usr/lib/aarch64-linux-gnu/libSDL2.so" \
-  		-DSDL2_INCLUDE_DIR="/usr/lib/aarch64-linux-gnu/include/SDL2" \
+		-DSDL2_INCLUDE_DIR="/usr/include/SDL2" \
 		-DUSE_VULKAN_DISPLAY_KHR=OFF \
 		-DUSING_X11_VULKAN=OFF \
 		-DUSE_WAYLAND_WSI=OFF \
 		-DUSING_FBDEV=ON \
 		-DCMAKE_C_COMPILER=/usr/bin/clang \
 		-DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-		-DCMAKE_C_FLAGS="-Ofast -fno-tree-slp-vectorize -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations" \
-		-DCMAKE_CXX_FLAGS="-Ofast -fno-tree-slp-vectorize -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations" \
+		-DCMAKE_C_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations" \
+		-DCMAKE_CXX_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -fpermissive" \
 		-DUSE_MINIUPNPC=OFF \
 		-DUSING_QT_UI=OFF \
 		-DUSE_DISCORD=OFF \
-		-DCMAKE_CXX_FLAGS=-fpermissive ../.
+		../.
 	  make -j$(nproc)
 
 	  if [[ $? != "0" ]]; then
