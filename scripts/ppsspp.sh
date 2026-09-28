@@ -35,7 +35,7 @@ TAG="v1.20.4"
 	  fi
 
 	 # Ensure dependencies are installed and available
-	 neededlibs=( libx11-dev libsm-dev libxext-dev git clang cmake mercurial libudev-dev libdrm-dev zlib1g-dev pkg-config libasound2-dev libfreetype6-dev libx11-xcb1 libxcb-dri2-0 libwayland-dev )
+     neededlibs=( libx11-dev libsm-dev libxext-dev git clang cmake mercurial libudev-dev libdrm-dev zlib1g-dev pkg-config libasound2-dev libfreetype6-dev libx11-xcb1 libxcb-dri2-0 )
      updateapt="N"
      for libs in "${neededlibs[@]}"
      do
@@ -100,7 +100,6 @@ TAG="v1.20.4"
 		-DUSE_MINIUPNPC=OFF \
 		-DUSING_QT_UI=OFF \
 		-DUSE_DISCORD=OFF \
-		-DCMAKE_EXE_LINKER_FLAGS="-lgbm -lwayland-egl" \
 		-DCMAKE_CXX_FLAGS=-fpermissive ../.
 	  make -j$(nproc)
 
