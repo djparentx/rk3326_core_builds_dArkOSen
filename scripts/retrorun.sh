@@ -29,6 +29,7 @@ commit="bcdb7afa316fae735b40f06d61072e2f9590ea8c" # Release 3.0.0
 
 	 cd retrorun/
 	 git checkout $commit
+	 sed -i 's/if (directScanoutCandidate &&/if (false \&\& directScanoutCandidate \&\&/' src/video.cpp
 
 	 retrorun_patches=$(find *.patch)
 	 
