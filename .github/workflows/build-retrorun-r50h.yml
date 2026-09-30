@@ -67,9 +67,15 @@ jobs:
             bash -c "
               set -e
               apt-get update
-              apt-get install -y build-essential g++-14 git cmake pkg-config \
+              apt-get install -y build-essential gcc-12 g++-12 git cmake pkg-config \
                 libsdl2-dev libpng-dev libdrm-dev libgbm-dev \
                 libegl1-mesa-dev libgles2-mesa-dev libopenal-dev libevdev-dev zlib1g-dev
+
+              ln -sf /usr/bin/gcc-12 /usr/bin/gcc
+              ln -sf /usr/bin/g++-12 /usr/bin/g++
+              ln -sf /usr/bin/gcc-12 /usr/bin/cc
+              ln -sf /usr/bin/g++-12 /usr/bin/c++
+              g++ --version | head -1
 
               mkdir -p /usr/include/rga /usr/include/go2
               cp vendor/rga/include/*.h /usr/include/rga/
