@@ -1,5 +1,5 @@
 diff --git a/src/frontend-common/sdl_controller_interface.cpp b/src/frontend-common/sdl_controller_interface.cpp
-index 20e81daf..1deac2ce 100644
+index e2958d2..2ee9255 100644
 --- a/src/frontend-common/sdl_controller_interface.cpp
 +++ b/src/frontend-common/sdl_controller_interface.cpp
 @@ -6,6 +6,7 @@
@@ -10,7 +10,7 @@ index 20e81daf..1deac2ce 100644
  #include <SDL.h>
  #include <cmath>
  Log_SetChannel(SDLControllerInterface);
-@@ -93,6 +94,8 @@ void SDLControllerInterface::PollEvents()
+@@ -107,6 +108,8 @@ void SDLControllerInterface::PollEvents()
  
  bool SDLControllerInterface::ProcessSDLEvent(const SDL_Event* event)
  {
@@ -19,7 +19,7 @@ index 20e81daf..1deac2ce 100644
    switch (event->type)
    {
      case SDL_CONTROLLERDEVICEADDED:
-@@ -204,6 +207,7 @@ bool SDLControllerInterface::OpenGameController(int index)
+@@ -218,6 +221,7 @@ bool SDLControllerInterface::OpenGameController(int index)
    cd.joystick_id = joystick_id;
    cd.haptic_left_right_effect = -1;
    cd.game_controller = gcontroller;
@@ -27,7 +27,24 @@ index 20e81daf..1deac2ce 100644
  
  #if SDL_VERSION_ATLEAST(2, 0, 9)
    cd.use_game_controller_rumble = (SDL_GameControllerRumble(gcontroller, 0, 0, 0) == 0);
-@@ -712,15 +716,59 @@ bool SDLControllerInterface::HandleControllerButtonEvent(const SDL_ControllerBut
+@@ -638,6 +642,16 @@ bool SDLControllerInterface::HandleControllerAxisEvent(const SDL_ControllerAxisE
+   if (it == m_controllers.end())
+     return false;
+ 
++  if (it->hotkey_down && ev->value > 16384 &&
++      (ev->axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || ev->axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT))
++  {
++    if (ev->axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT)
++      m_host_interface->LoadState(false, m_slots);
++    else
++      m_host_interface->SaveState(false, m_slots);
++    return true;
++  }
++
+   if (DoEventHook(Hook::Type::Axis, it->player_id, ev->axis, value))
+     return true;
+ 
+@@ -726,15 +740,57 @@ bool SDLControllerInterface::HandleControllerButtonEvent(const SDL_ControllerBut
      m_host_interface->SetControllerNavigationButtonState(nav_button_mapping[ev->button], pressed);
    }
  
@@ -48,8 +65,6 @@ index 20e81daf..1deac2ce 100644
 +        case SDL_CONTROLLER_BUTTON_START        :
 +        case SDL_CONTROLLER_BUTTON_LEFTSTICK    :
 +        case SDL_CONTROLLER_BUTTON_RIGHTSTICK   : break;
-+        case SDL_CONTROLLER_BUTTON_LEFTTRIGGER  : m_host_interface->LoadState(false, m_slots); break;
-+        case SDL_CONTROLLER_BUTTON_RIGHTTRIGGER : m_host_interface->SaveState(false, m_slots); break;
 +        case SDL_CONTROLLER_BUTTON_DPAD_UP      : m_slots = ++m_slots % 10; m_host_interface->AddOSDMessage(std::string("State Slot set to #") + (char)(0x30 + m_slots), 5.f); break;
 +        case SDL_CONTROLLER_BUTTON_DPAD_DOWN    : m_slots = (m_slots + 9) % 10; m_host_interface->AddOSDMessage(std::string("State Slot set to #") + (char)(0x30 + m_slots), 5.f); break;
 +        case SDL_CONTROLLER_BUTTON_DPAD_LEFT    : m_host_interface->SetRewindState(!System::IsRewinding()); break;
@@ -91,7 +106,7 @@ index 20e81daf..1deac2ce 100644
    if (cb)
    {
 diff --git a/src/frontend-common/sdl_controller_interface.h b/src/frontend-common/sdl_controller_interface.h
-index 06963a5c..ffc2ffac 100644
+index 06963a5..ffc2ffa 100644
 --- a/src/frontend-common/sdl_controller_interface.h
 +++ b/src/frontend-common/sdl_controller_interface.h
 @@ -57,6 +57,7 @@ private:
