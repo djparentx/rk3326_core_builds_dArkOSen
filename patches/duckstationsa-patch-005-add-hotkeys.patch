@@ -48,8 +48,8 @@ index 20e81daf..1deac2ce 100644
 +        case SDL_CONTROLLER_BUTTON_START        :
 +        case SDL_CONTROLLER_BUTTON_LEFTSTICK    :
 +        case SDL_CONTROLLER_BUTTON_RIGHTSTICK   : break;
-+        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER : m_host_interface->LoadState(false, m_slots); break;
-+        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: m_host_interface->SaveState(false, m_slots); break;
++        case SDL_CONTROLLER_BUTTON_LEFTTRIGGER  : m_host_interface->LoadState(false, m_slots); break;
++        case SDL_CONTROLLER_BUTTON_RIGHTTRIGGER : m_host_interface->SaveState(false, m_slots); break;
 +        case SDL_CONTROLLER_BUTTON_DPAD_UP      : m_slots = ++m_slots % 10; m_host_interface->AddOSDMessage(std::string("State Slot set to #") + (char)(0x30 + m_slots), 5.f); break;
 +        case SDL_CONTROLLER_BUTTON_DPAD_DOWN    : m_slots = (m_slots + 9) % 10; m_host_interface->AddOSDMessage(std::string("State Slot set to #") + (char)(0x30 + m_slots), 5.f); break;
 +        case SDL_CONTROLLER_BUTTON_DPAD_LEFT    : m_host_interface->SetRewindState(!System::IsRewinding()); break;
