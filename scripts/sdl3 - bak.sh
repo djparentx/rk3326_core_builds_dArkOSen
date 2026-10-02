@@ -11,8 +11,8 @@
 
 cur_wd="$PWD"
 bitness="$(getconf LONG_BIT)"
-branch="release-3.4.16"
-extension="0.4.16"
+branch="sdl2-backend"
+extension="0.5.0"
 
 if [[ $bitness == "32" ]]; then
   INSTALL_FOLDER="/usr/lib/arm-linux-gnueabihf"
@@ -25,7 +25,7 @@ fi
 
 	  # Now we'll start the clone and build process of sdl3
 	  if [ ! -d "SDL3/" ]; then
-		git clone --recursive https://github.com/libsdl-org/SDL.git -b "$branch" SDL3
+		git clone --recursive https://github.com/bmdhacks/SDL.git -b "$branch" SDL3
 		if [[ $? != "0" ]]; then
 		  echo " "
 		  echo "There was an error while cloning the sdl3 standalone git.  Is Internet active or did the git location change?  Stopping here."
@@ -40,6 +40,7 @@ fi
 	  fi
 
 	 cd SDL3
+	 git clone https://github.com/KhronosGroup/SPIRV-Cross.git
 
 	 sdl3_patches=$(find *.patch)
 	 
@@ -72,15 +73,25 @@ fi
          cmake .. \
                -DCMAKE_BUILD_TYPE=Release \
                -DCMAKE_C_FLAGS="-mcpu=cortex-a55" \
-               -DSDL_KMSDRM=ON \
-               -DSDL_UNIX_CONSOLE_BUILD=ON \
+               -DSDL_SDL2_BACKEND=ON \
+               -DSDL_SPIRV_CROSS_DIR=../SPIRV-Cross \
                -DSDL_X11=OFF \
                -DSDL_WAYLAND=OFF \
-               -DSDL_VULKAN=OFF \
+               -DSDL_KMSDRM=OFF \
                -DSDL_PIPEWIRE=OFF \
                -DSDL_PULSEAUDIO=OFF \
-               -DSDL_TESTS=OFF \
-               -DSDL_EXAMPLES=OFF
+               -DSDL_ALSA=OFF \
+               -DSDL_SNDIO=OFF \
+               -DSDL_OSS=OFF \
+               -DSDL_JACK=OFF \
+               -DSDL_OFFSCREEN=OFF \
+               -DSDL_DUMMYVIDEO=OFF \
+               -DSDL_DUMMYAUDIO=OFF \
+               -DSDL_DISKAUDIO=OFF \
+               -DSDL_VULKAN=OFF \
+               -DSDL_GPU=ON \
+               -DSDL_RENDER_GPU=ON \
+               -DSDL_UNIX_CONSOLE_BUILD=ON
           export LDFLAGS="${LDFLAGS} -lrga"
        #fi
 

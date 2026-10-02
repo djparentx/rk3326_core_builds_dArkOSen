@@ -1,0 +1,45 @@
+name: Build SDL3 (runtime rotation)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-sdl3-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build SDL3 in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config \
+                libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libasound2-dev libpulse-dev libsamplerate0-dev \
+                libudev-dev libevdev-dev zlib1g-dev
+              mkdir -p /usr/include/rga
+              cp vendor/rga/include/*.h /usr/include/rga/
+              cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
+              ldconfig
+              ./builds.sh sdl3
+              readelf -d sdl3-64/libSDL3.so.0.4.16 | grep -q 'librga'
+              strings sdl3-64/libSDL3.so.0.4.16 | grep 'SDL-release-3.4.16'
+            "
+
+      - name: Upload built SDL3 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdl3-runtime-rotate-build
+          path: |
+            sdl3-64/libSDL3.so.0.4.16
