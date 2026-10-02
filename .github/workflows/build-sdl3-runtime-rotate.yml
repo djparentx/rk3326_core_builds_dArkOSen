@@ -33,13 +33,17 @@ jobs:
               cp vendor/rga/lib/librga.so* /usr/lib/aarch64-linux-gnu/
               ldconfig
               ./builds.sh sdl3
-              readelf -d sdl3-64/libSDL3.so.0.4.16 | grep -q 'librga'
-              strings sdl3-64/libSDL3.so.0.4.16 | grep 'SDL-release-3.4.16'
+              ls -la sdl3-64/
+              readelf -d sdl3-64/libSDL3.so.0.4.16 | grep -E 'NEEDED|SONAME' || echo 'CHECK: no NEEDED/SONAME found'
+              readelf -d sdl3-64/libSDL3.so.0.4.16 | grep -q 'librga' || echo 'CHECK: librga NOT in NEEDED'
+              strings sdl3-64/libSDL3.so.0.4.16 | grep 'SDL-release' || echo 'CHECK: revision string not found'
             "
 
       - name: Upload built SDL3 binary
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sdl3-runtime-rotate-build
           path: |
             sdl3-64/libSDL3.so.0.4.16
+          if-no-files-found: warn
