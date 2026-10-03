@@ -96,7 +96,7 @@ bitness="$(getconf LONG_BIT)"
                    -DUSE_FBDEV=OFF \
                    -DUSE_EVDEV=ON \
                    -DUSE_EGL=ON \
-                   -DUSE_DRMKMS=OFF \
+                   -DUSE_DRMKMS=ON \
                    -DUSE_MALI=OFF \
                    ..
              if [[ $? != "0" ]]; then
