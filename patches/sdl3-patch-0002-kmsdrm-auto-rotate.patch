@@ -1,0 +1,42 @@
+diff --git a/src/video/kmsdrm/SDL_kmsdrmvideo.c b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+index dbc85b9..010d0cb 100644
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.c
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+@@ -738,27 +738,8 @@ static void KMSDRM_FBDestroyCallback(struct gbm_bo *bo, void *data)
+     SDL_free(fb_info);
+ }
+ 
+-/* dArkOS: rotation is decided at runtime. When /home/ark/.config/.DEVICE
+-   contains "rotated" (case-insensitive), the portrait panel is driven as a
+-   landscape screen using the RGA 2D blitter (ROT_270). Checked once, cached. */
+-#define KMSDRM_DEVICE_FLAG_FILE "/home/ark/.config/.DEVICE"
+-#define KMSDRM_DEVICE_FLAG_TAG  "rotated"
+-
+-static bool KMSDRM_DeviceIsRotated(void)
+-{
+-    static bool checked = false;
+-    static bool rotated = false;
+-
+-    if (!checked) {
+-        char *buf = (char *)SDL_LoadFile(KMSDRM_DEVICE_FLAG_FILE, NULL);
+-        checked = true;
+-        if (buf) {
+-            rotated = SDL_strcasestr(buf, KMSDRM_DEVICE_FLAG_TAG) != NULL;
+-            SDL_free(buf);
+-        }
+-    }
+-    return rotated;
+-}
++/* dArkOS: when the panel's native mode is portrait (height > width), it is
++   driven as a landscape screen using the RGA 2D blitter (ROT_270). */
+ 
+ static void KMSDRM_DeinitRotateBuffer(SDL_DisplayData *dispdata)
+ {
+@@ -1365,7 +1346,7 @@ static void KMSDRM_AddDisplay(SDL_VideoDevice *_this, drmModeConnector *conn, dr
+        which is the mode currently setup on the CRTC
+        we found for the active connector. */
+     dispdata->mode = crtc->mode;
+-    dispdata->rotated = KMSDRM_DeviceIsRotated();
++    dispdata->rotated = (crtc->mode.vdisplay > crtc->mode.hdisplay);
+     dispdata->original_mode = crtc->mode;
+     dispdata->fullscreen_mode = crtc->mode;
