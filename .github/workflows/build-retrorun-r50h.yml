@@ -45,7 +45,7 @@ jobs:
         with:
           name: retrorun-r50h-build
           path: |
-            retrorun-64/retrorun-rk3326
+            retrorun-64/retrorun
 
   build-retrorun-armhf:
     runs-on: ubuntu-latest
@@ -88,4 +88,4 @@ jobs:
         with:
           name: retrorun32-r50h-build
           path: |
-            retrorun-32/retrorun32-rk3326
+            retrorun-32/retrorun32

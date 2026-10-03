@@ -48,4 +48,4 @@ jobs:
         with:
           name: flycastsa-r50h-build
           path: |
-            flycastsa-64/flycast-rk3326
+            flycastsa-64/flycast

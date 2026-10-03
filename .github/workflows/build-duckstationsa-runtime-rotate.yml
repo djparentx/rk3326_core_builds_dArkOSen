@@ -33,30 +33,9 @@ jobs:
               export CXXFLAGS='-Ofast -march=armv8-a+crc -mtune=cortex-a35 -include cstdarg -include cstdio'
               ./builds.sh duckstationsa
             "
-          sudo mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-a35
-          sudo mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-a35_pkg.tar.gz
+          sudo mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa
+          sudo mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa_pkg.tar.gz
           sudo rm -rf duckstation build
-
-      - name: Build DuckStation (generic) in aarch64 Debian Trixie container
-        run: |
-          docker run --rm --platform linux/arm64 \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace \
-            debian:trixie \
-            bash -c "
-              set -e
-              apt-get update
-              apt-get install -y build-essential git cmake pkg-config \
-                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
-                libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
-                libzip-dev liblzma-dev
-              mkdir -p /usr/local/lib/aarch64-linux-gnu
-              export CFLAGS='-Ofast -march=armv8-a+crc'
-              export CXXFLAGS='-Ofast -march=armv8-a+crc -include cstdarg -include cstdio'
-              ./builds.sh duckstationsa
-            "
-          sudo mv duckstationsa-64/duckstation-nogui duckstationsa-64/duckstationsa-generic
-          sudo mv duckstationsa-64/duckstationsa_pkg_*.tar.gz duckstationsa-64/duckstationsa-generic_pkg.tar.gz
 
       - name: Debug - list build output
         run: find . -iname "duckstationsa-64*"
@@ -67,7 +46,5 @@ jobs:
           name: duckstationsa-runtime-rotate
           if-no-files-found: error
           path: |
-            duckstationsa-64/duckstationsa-a35
-            duckstationsa-64/duckstationsa-a35_pkg.tar.gz
-            duckstationsa-64/duckstationsa-generic
-            duckstationsa-64/duckstationsa-generic_pkg.tar.gz
+            duckstationsa-64/duckstationsa
+            duckstationsa-64/duckstationsa_pkg.tar.gz

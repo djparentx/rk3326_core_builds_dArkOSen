@@ -52,7 +52,7 @@ jobs:
         with:
           name: retroarch-runtime-rotate-build
           path: |
-            retroarch64/retroarch.rk3326
+            retroarch64/retroarch
 
   build-retroarch-armhf:
     runs-on: ubuntu-latest
@@ -103,4 +103,4 @@ jobs:
         with:
           name: retroarch32-runtime-rotate-build
           path: |
-            retroarch32/retroarch32.rk3326
+            retroarch32/retroarch32
