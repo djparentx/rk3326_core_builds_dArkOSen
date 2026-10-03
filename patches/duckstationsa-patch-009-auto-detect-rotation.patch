@@ -1,0 +1,59 @@
+diff --git a/src/duckstation-nogui/nogui_host_interface.cpp b/src/duckstation-nogui/nogui_host_interface.cpp
+index eda7baa..2ef8125 100644
+--- a/src/duckstation-nogui/nogui_host_interface.cpp
++++ b/src/duckstation-nogui/nogui_host_interface.cpp
+@@ -22,6 +22,34 @@
+ #include <cmath>
+ Log_SetChannel(NoGUIHostInterface);
+ 
++#ifdef WITH_DRMKMS
++#include "common/drm_display.h"
++#endif
++
++/* dArkOSen: rotation is decided at runtime, not at compile time. When the
++ * panel's native DRM mode is portrait (height > width), this forces a 270
++ * degree rotation regardless of the settings.ini value. Same detection as
++ * the dArkOSen SDL3 kmsdrm auto-rotate patch. Checked once and cached. */
++static bool DuckStationDeviceIsRotated()
++{
++  static bool checked = false;
++  static bool rotated = false;
++
++  if (!checked)
++  {
++    checked = true;
++
++#ifdef WITH_DRMKMS
++    u32 width = 0;
++    u32 height = 0;
++    if (DRMDisplay::GetCurrentMode(&width, &height, nullptr))
++      rotated = (height > width);
++#endif
++  }
++
++  return rotated;
++}
++
+ #ifdef _WIN32
+ #include "frontend-common/d3d11_host_display.h"
+ #include "frontend-common/d3d12_host_display.h"
+@@ -140,11 +168,15 @@ bool NoGUIHostInterface::CreateDisplay(bool fullscreen)
+     return false;
+   }
+ 
+-  switch(g_settings.display_rotate & 3)
++  s8 display_rotate = g_settings.display_rotate;
++  if (DuckStationDeviceIsRotated())
++    display_rotate = 3;
++
++  switch (display_rotate & 3)
+   {
+-    case 1: m_display->SetDisplayRotation(HostDisplay::Rotation::R90Degrees);
+-    case 2: m_display->SetDisplayRotation(HostDisplay::Rotation::R180Degrees);
+-    case 3: m_display->SetDisplayRotation(HostDisplay::Rotation::R270Degrees);
++    case 1: m_display->SetDisplayRotation(HostDisplay::Rotation::R90Degrees); break;
++    case 2: m_display->SetDisplayRotation(HostDisplay::Rotation::R180Degrees); break;
++    case 3: m_display->SetDisplayRotation(HostDisplay::Rotation::R270Degrees); break;
+     case 0:
+     default: break;
+   }
