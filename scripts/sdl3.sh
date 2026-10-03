@@ -71,7 +71,7 @@ fi
          cd build
          cmake .. \
                -DCMAKE_BUILD_TYPE=Release \
-               -DCMAKE_C_FLAGS="-mcpu=cortex-a55" \
+               -DCMAKE_C_FLAGS="-march=armv8-a+crc -mtune=cortex-a35" \
                -DSDL_KMSDRM=ON \
                -DSDL_UNIX_CONSOLE_BUILD=ON \
                -DSDL_X11=OFF \
