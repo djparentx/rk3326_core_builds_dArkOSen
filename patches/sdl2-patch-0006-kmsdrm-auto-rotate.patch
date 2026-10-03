@@ -1,0 +1,97 @@
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.c
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+@@ -75,51 +75,6 @@
+ rga_info_t src_info = {0};
+ rga_info_t dst_info = {0};
+ 
+-/* dArkOS: rotation is decided at runtime, not at compile time. When
+- * /home/ark/.config/.DEVICE contains "rotated" (case-insensitive, same
+- * convention as the dArkOSen Kodi and RetroArch builds), this driver
+- * drives the panel as a rotated (portrait-panel-in-landscape-housing)
+- * screen, using the RGA 2D blitter. Otherwise it drives it as a normal
+- * landscape panel with the stock kmsdrm code path. Checked once, cached. */
+-#define KMSDRM_DEVICE_FLAG_FILE "/home/ark/.config/.DEVICE"
+-#define KMSDRM_DEVICE_FLAG_TAG  "rotated"
+-
+-static SDL_bool KMSDRM_DeviceIsRotated(void)
+-{
+-    static SDL_bool checked = SDL_FALSE;
+-    static SDL_bool rotated = SDL_FALSE;
+-
+-    if (!checked) {
+-        char buf[256];
+-        FILE *f = fopen(KMSDRM_DEVICE_FLAG_FILE, "r");
+-        checked = SDL_TRUE;
+-
+-        if (f) {
+-            size_t len = fread(buf, 1, sizeof(buf) - 1, f);
+-            fclose(f);
+-            buf[len] = '\0';
+-
+-            if (len >= SDL_strlen(KMSDRM_DEVICE_FLAG_TAG)) {
+-                size_t tag_len = SDL_strlen(KMSDRM_DEVICE_FLAG_TAG);
+-                size_t i;
+-
+-                for (i = 0; buf[i] != '\0' && !rotated; i++) {
+-                    size_t j;
+-                    for (j = 0; j < tag_len && buf[i + j] != '\0'; j++) {
+-                        if (tolower((unsigned char)buf[i + j]) !=
+-                                tolower((unsigned char)KMSDRM_DEVICE_FLAG_TAG[j]))
+-                            break;
+-                    }
+-                    if (j == tag_len)
+-                        rotated = SDL_TRUE;
+-                }
+-            }
+-        }
+-    }
+-
+-    return rotated;
+-}
+-
+ static int get_driindex(void)
+ {
+     int available = -ENOENT;
+@@ -827,7 +782,6 @@
+        to sane values. */
+     dispdata->cursor_bo = NULL;
+     dispdata->cursor_bo_drm_fd = -1;
+-    dispdata->rotated = viddata->rotated;
+ 
+     /* Since we create and show the default cursor on KMSDRM_InitMouse(),
+        and we call KMSDRM_InitMouse() when we create a window, we have to know
+@@ -957,6 +911,10 @@
+     dispdata->original_mode = crtc->mode;
+     dispdata->fullscreen_mode = crtc->mode;
+ 
++    /* dArkOS: portrait native mode => drive it as landscape via RGA. */
++    viddata->rotated = (crtc->mode.vdisplay > crtc->mode.hdisplay) ? SDL_TRUE : SDL_FALSE;
++    dispdata->rotated = viddata->rotated;
++
+     if (dispdata->mode.hdisplay == 0 || dispdata->mode.vdisplay == 0) {
+         ret = SDL_SetError("Couldn't get a valid connector videomode.");
+         goto cleanup;
+@@ -1417,7 +1375,7 @@
+ 
+     viddata->video_init = SDL_FALSE;
+     viddata->gbm_init = SDL_FALSE;
+-    viddata->rotated = KMSDRM_DeviceIsRotated();
++    viddata->rotated = SDL_FALSE;
+ 
+     /* Get KMSDRM resources info and store what we need. Getting and storing
+        this info isn't a problem for VK compatibility.
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.h
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.h
+@@ -96,9 +96,9 @@
+        open 1 FD and create 1 gbm device. */
+     SDL_bool gbm_init;
+ 
+-    /* dArkOS: set once at VideoInit() from /home/ark/.config/.DEVICE.
+-       SDL_TRUE selects the RGA-rotated (portrait-panel-in-landscape-housing)
+-       code paths; SDL_FALSE runs the stock, non-rotated behavior. */
++    /* dArkOS: auto-detected in KMSDRM_AddDisplay(): SDL_TRUE when the
++       panel native mode is portrait (vdisplay > hdisplay), which selects
++       the RGA-rotated code paths; SDL_FALSE runs the stock behavior. */
+     SDL_bool rotated;
+ 
+     struct gbm_bo* rga_buffers[RGA_BUFFERS_MAX];
