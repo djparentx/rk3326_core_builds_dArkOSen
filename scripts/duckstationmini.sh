@@ -35,6 +35,8 @@ sed -i 's|^\(\s*\)s_state.sdl_window = SDL_CreateWindowWithProperties(props);|\1
 grep -q 'SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);' src/duckstation-mini/mini_host.cpp || { echo "mini_host.cpp GL attribute fix did not apply. Stopping here."; exit 1; }
 
 sed -i 's|^#if !__has_include("scmversion/tag.h")$|#if 0|' src/duckstation-mini/mini_host.cpp
+sed -i '/^void MiniHost::WarnAboutInterface()$/,/^}$/{/^void MiniHost::WarnAboutInterface()$/!{/^{$/!{/^}$/!d}}}' src/duckstation-mini/mini_host.cpp
+sed -i '/^void Host::OnSystemDestroyed()$/{n;n;s|^}$|  if (MiniHost::s_state.batch_mode)\n    Host::RequestExitApplication(false);\n}|}' src/duckstation-mini/mini_host.cpp
 
 # Prebuilt dependency pack (version pinned by the DuckStation commit)
 DEPS_VERSION=$(cat dep/PREBUILT-VERSION)
