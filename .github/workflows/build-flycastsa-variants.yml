@@ -1,0 +1,57 @@
+name: Build Flycast Standalone variants (compiler/flag test)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-flycastsa-variant:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [gcc-tune, gcc-notune, gcc-O3, clang-lto]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: flycastsatest-ccache-${{ matrix.variant }}-${{ hashFiles('patches/flycastsa-patch*', 'scripts/flycastsatest.sh') }}
+          restore-keys: |
+            flycastsatest-ccache-${{ matrix.variant }}-
+
+      - name: Build Flycast (${{ matrix.variant }}) in aarch64 Debian Trixie container
+        run: |
+          mkdir -p ${{ github.workspace }}/.ccache
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e CCACHE_DIR=/workspace/.ccache \
+            -e FLY_VARIANT=${{ matrix.variant }} \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config ccache clang lld libomp-dev \
+                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
+                libzip-dev liblzma-dev
+              mkdir -p /usr/local/lib/aarch64-linux-gnu
+              ccache --max-size=2G
+              ./builds.sh flycastsatest
+              ccache --show-stats
+            "
+
+      - name: Upload built Flycast binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: flycastsa-${{ matrix.variant }}
+          if-no-files-found: error
+          path: flycastsa-64/flycast-${{ matrix.variant }}
