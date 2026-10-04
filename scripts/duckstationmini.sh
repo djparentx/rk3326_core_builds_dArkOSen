@@ -34,6 +34,8 @@ grep -q '^#include "opengl_context_egl.h"$' src/util/opengl_context.cpp || { ech
 sed -i 's|^\(\s*\)s_state.sdl_window = SDL_CreateWindowWithProperties(props);|\1if (render_api == RenderAPI::OpenGL \|\| render_api == RenderAPI::OpenGLES)\n\1{\n\1  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);\n\1  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);\n\1  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);\n\1}\n\1s_state.sdl_window = SDL_CreateWindowWithProperties(props);|' src/duckstation-mini/mini_host.cpp
 grep -q 'SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);' src/duckstation-mini/mini_host.cpp || { echo "mini_host.cpp GL attribute fix did not apply. Stopping here."; exit 1; }
 
+sed -i 's|^#if !__has_include("scmversion/tag.h")$|#if 0|' src/duckstation-mini/mini_host.cpp
+
 # Prebuilt dependency pack (version pinned by the DuckStation commit)
 DEPS_VERSION=$(cat dep/PREBUILT-VERSION)
 echo "Using dependency pack $DEPS_VERSION"
