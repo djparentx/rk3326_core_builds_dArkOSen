@@ -50,12 +50,12 @@ if [ "$?" -eq "10" ]; then
   if [ ! -f "/$directory/psx/duckstation_gamesettings/${filename}.settings.ini" ]; then
       cp "$HOME/.local/share/duckstation/settings.ini" "/$directory/psx/duckstation_gamesettings/${filename}.settings.ini"
   fi
-  /opt/duckstation/duckstation-mini -fullscreen -- "${3}" > /dev/null 2>&1
+  /opt/duckstation/duckstationsa -earlyconsole -batch -fullscreen -- "${3}" > /opt/duckstation/mini.log 2>&1
 else
   if [ -f "/$directory/psx/duckstation_gamesettings/${filename}.settings.ini" ]; then
-    /opt/duckstation/duckstation-mini -fullscreen -- "${3}" > /dev/null 2>&1
+    /opt/duckstation/duckstationsa -earlyconsole -batch -fullscreen -- "${3}" > /opt/duckstation/mini.log 2>&1
   else
-    /opt/duckstation/duckstation-mini -fullscreen -- "${3}" > /dev/null 2>&1
+    /opt/duckstation/duckstationsa -earlyconsole -batch -fullscreen -- "${3}" > /opt/duckstation/mini.log 2>&1
   fi
 fi
 
