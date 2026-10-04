@@ -110,3 +110,4 @@ tar -zcf "$OUT/duckstationmini_pkg.tar.gz" -C "$OUT/bin" .
 
 echo " "
 echo "DuckStation Mini has been created and placed in the duckstationmini-64 subfolder"
+ls -lR "$OUT" | head -60

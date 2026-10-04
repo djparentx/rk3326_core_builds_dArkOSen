@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: duckstationmini-arm64
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             duckstationmini-64/duckstationmini_pkg.tar.gz
             duckstationmini-64/build-info.txt
