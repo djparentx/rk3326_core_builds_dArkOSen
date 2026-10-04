@@ -37,16 +37,31 @@ for pack in deps-linux-x64 deps-linux-cross-arm64; do
 done
 cd "$SRC"
 
-# Toolchain file: pack's toolchain + clang-19/lld, same as upstream's cross workflow
+# Detect the clang version the container actually ships (image tag :latest drifts)
+CLANG_VER=""
+for v in 25 24 23 22 21 20 19 18; do
+  if command -v clang-$v >/dev/null 2>&1 && command -v llvm-ar-$v >/dev/null 2>&1; then
+    CLANG_VER=$v
+    break
+  fi
+done
+if [ -z "$CLANG_VER" ]; then
+  echo "No usable clang-NN found in PATH. Compiler tools present:"
+  ls /usr/bin /usr/local/bin 2>/dev/null | grep -i "clang\|llvm" || true
+  exit 1
+fi
+echo "Using clang-$CLANG_VER"
+
+# Toolchain file: pack's toolchain + clang/lld, same as upstream's cross workflow
 cp dep/prebuilt/linux-cross-arm64/toolchain.cmake "$TOOLCHAIN"
 cat >> "$TOOLCHAIN" <<EOF
 set(CMAKE_FIND_ROOT_PATH "$PWD/dep/prebuilt/linux-cross-arm64;/arm64-chroot")
-set(CMAKE_C_COMPILER clang-19)
-set(CMAKE_C_COMPILER_AR llvm-ar-19)
-set(CMAKE_C_COMPILER_RANLIB llvm-ranlib-19)
-set(CMAKE_CXX_COMPILER clang++-19)
-set(CMAKE_CXX_COMPILER_AR llvm-ar-19)
-set(CMAKE_CXX_COMPILER_RANLIB llvm-ranlib-19)
+set(CMAKE_C_COMPILER clang-${CLANG_VER})
+set(CMAKE_C_COMPILER_AR llvm-ar-${CLANG_VER})
+set(CMAKE_C_COMPILER_RANLIB llvm-ranlib-${CLANG_VER})
+set(CMAKE_CXX_COMPILER clang++-${CLANG_VER})
+set(CMAKE_CXX_COMPILER_AR llvm-ar-${CLANG_VER})
+set(CMAKE_CXX_COMPILER_RANLIB llvm-ranlib-${CLANG_VER})
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld")
 set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld")
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld")
@@ -70,7 +85,7 @@ cmake --build build --parallel --target duckstation-mini
 # Collect output
 mkdir -p "$OUT/bin"
 cp -a build/bin/. "$OUT/bin/"
-llvm-strip-19 "$OUT/bin/duckstation-mini"
+llvm-strip-${CLANG_VER} "$OUT/bin/duckstation-mini"
 
 # Diagnostics for the first run
 {
