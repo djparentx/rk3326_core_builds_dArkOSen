@@ -26,6 +26,10 @@ git remote add origin https://github.com/stenzek/duckstation.git
 git fetch --depth 1 origin "$DS_COMMIT"
 git checkout -q FETCH_HEAD
 
+# Upstream bug: opengl_context.cpp uses OpenGLContextEGL but only gets its header via the X11/Wayland headers
+sed -i 's|^#ifdef ENABLE_EGL$|#ifdef ENABLE_EGL\n#include "opengl_context_egl.h"|' src/util/opengl_context.cpp
+grep -q '^#include "opengl_context_egl.h"$' src/util/opengl_context.cpp || { echo "opengl_context.cpp include fix did not apply. Stopping here."; exit 1; }
+
 # Prebuilt dependency pack (version pinned by the DuckStation commit)
 DEPS_VERSION=$(cat dep/PREBUILT-VERSION)
 echo "Using dependency pack $DEPS_VERSION"
