@@ -91,6 +91,26 @@ mkdir -p "$OUT/bin"
 cp -a build/bin/. "$OUT/bin/"
 llvm-strip-${CLANG_VER} "$OUT/bin/duckstation-mini"
 
+# Bundle shared libs from the dependency pack that the binary needs (SDL3 excluded: the device uses the patched system one)
+PACKLIB="$SRC/dep/prebuilt/linux-cross-arm64/lib"
+mkdir -p "$OUT/bin/lib"
+queue=("$OUT/bin/duckstation-mini")
+seen=" "
+while [ ${#queue[@]} -gt 0 ]; do
+  cur="${queue[0]}"
+  queue=("${queue[@]:1}")
+  for need in $(readelf -d "$cur" | grep NEEDED | sed 's/.*\[\(.*\)\]/\1/'); do
+    case "$seen" in *" $need "*) continue ;; esac
+    seen="$seen$need "
+    case "$need" in libSDL3.so*) continue ;; esac
+    if [ -e "$PACKLIB/$need" ]; then
+      cp -L "$PACKLIB/$need" "$OUT/bin/lib/$need"
+      queue+=("$OUT/bin/lib/$need")
+    fi
+  done
+done
+ls -l "$OUT/bin/lib"
+
 # Diagnostics for the first run
 {
   echo "DuckStation commit: $DS_COMMIT"
@@ -110,4 +130,3 @@ tar -zcf "$OUT/duckstationmini_pkg.tar.gz" -C "$OUT/bin" .
 
 echo " "
 echo "DuckStation Mini has been created and placed in the duckstationmini-64 subfolder"
-ls -lR "$OUT" | head -60
