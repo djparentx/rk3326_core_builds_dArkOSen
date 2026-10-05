@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [gcc-tune, gcc-notune, gcc-O3, clang-lto]
+        variant: [clang-lto]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
             bash -c "
               set -e
               apt-get update
-              apt-get install -y build-essential git cmake pkg-config ccache clang lld libomp-dev \
+              apt-get install -y build-essential git cmake pkg-config ccache clang lld llvm libomp-dev \
                 libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
                 libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
                 libzip-dev liblzma-dev

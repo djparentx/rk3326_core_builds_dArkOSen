@@ -39,6 +39,11 @@ TAG="v2.6"
 	      exit 1
 	      ;;
 	  esac
+	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"
+	  if [[ "$FLY_VARIANT" == "clang-lto" ]]; then
+	    FLY_AR="/usr/bin/llvm-ar"; FLY_RANLIB="/usr/bin/llvm-ranlib"
+	  fi
+
 	  echo "Building flycast variant: $FLY_VARIANT ($FLY_CC, $FLY_FLAGS)"
 
 	  cd $cur_wd
@@ -85,6 +90,8 @@ TAG="v2.6"
 	    -DCMAKE_C_FLAGS="$FLY_FLAGS" \
 	    -DCMAKE_CXX_FLAGS="$FLY_FLAGS" \
 	    -DCMAKE_EXE_LINKER_FLAGS="$FLY_LINK" \
+	    -DCMAKE_AR="$FLY_AR" \
+	    -DCMAKE_RANLIB="$FLY_RANLIB" \		
 	    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
 	    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 	    -DWITH_SYSTEM_ZLIB=ON \
