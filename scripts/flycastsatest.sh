@@ -39,9 +39,9 @@ TAG="v2.6"
 	      exit 1
 	      ;;
 	  esac
-	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"
+	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"; FLY_BREAKPAD="ON"
 	  if [[ "$FLY_VARIANT" == "clang-lto" ]]; then
-	    FLY_AR="/usr/bin/llvm-ar"; FLY_RANLIB="/usr/bin/llvm-ranlib"
+	    FLY_AR="/usr/bin/llvm-ar"; FLY_RANLIB="/usr/bin/llvm-ranlib"; FLY_BREAKPAD="OFF"
 	  fi
 
 	  echo "Building flycast variant: $FLY_VARIANT ($FLY_CC, $FLY_FLAGS)"
@@ -92,6 +92,7 @@ TAG="v2.6"
 	    -DCMAKE_EXE_LINKER_FLAGS="$FLY_LINK" \
 	    -DCMAKE_AR="$FLY_AR" \
 	    -DCMAKE_RANLIB="$FLY_RANLIB" \
+	    -DUSE_BREAKPAD="$FLY_BREAKPAD" \
 	    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
 	    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 	    -DWITH_SYSTEM_ZLIB=ON \
@@ -100,9 +101,11 @@ TAG="v2.6"
 	    -DUSE_VULKAN=OFF \
 	    -DUSE_GLES=ON -DUSE_HOST_SDL=ON -DUSE_ALSA=OFF -DFLYCAST_LINK_MALI_SHIMS=ON -B .
 
-	  make -j$(nproc)
-	  if [[ $? != "0" ]]; then
+	  make -j$(nproc) 2>&1 | tee make.log
+	  if [[ ${PIPESTATUS[0]} != "0" ]]; then
 		echo " "
+		echo "=== FIRST ERRORS ==="
+		grep -n -m10 -B3 -A8 "error:\|undefined\|\*\*\*" make.log
 		echo "There was an error while building the flycast standalone emulator.  Stopping here."
 		exit 1
 	  fi
