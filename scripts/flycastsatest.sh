@@ -29,19 +29,19 @@ TAG="v2.6"
 	      FLY_FLAGS="-O3 -march=armv8-a+crc -DNDEBUG"
 	      FLY_LINK=""
 	      ;;
-	    clang-lto)
+	    clang-O3)
 	      FLY_CC="clang"; FLY_CXX="clang++"
-	      FLY_FLAGS="-O3 -march=armv8-a+crc -flto=thin -DNDEBUG"
-	      FLY_LINK="-fuse-ld=lld"
+	      FLY_FLAGS="-O3 -march=armv8-a+crc -DNDEBUG"
+	      FLY_LINK="-fuse-ld=bfd"
 	      ;;
 	    *)
 	      echo "FLY_VARIANT must be one of: gcc-tune gcc-notune gcc-O3 clang-lto"
 	      exit 1
 	      ;;
 	  esac
-	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"; FLY_BREAKPAD="ON"
-	  if [[ "$FLY_VARIANT" == "clang-lto" ]]; then
-	    FLY_AR="/usr/bin/llvm-ar"; FLY_RANLIB="/usr/bin/llvm-ranlib"; FLY_BREAKPAD="OFF"
+	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"; FLY_BREAKPAD="ON"; FLY_OPENMP="ON"
+	  if [[ "$FLY_VARIANT" == "clang-O3" ]]; then
+	    FLY_BREAKPAD="OFF"; FLY_OPENMP="OFF"
 	  fi
 
 	  echo "Building flycast variant: $FLY_VARIANT ($FLY_CC, $FLY_FLAGS)"
@@ -97,7 +97,7 @@ TAG="v2.6"
 	    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 	    -DWITH_SYSTEM_ZLIB=ON \
 	    -DUSE_PULSEAUDIO=OFF \
-	    -DUSE_OPENMP=ON \
+	    -DUSE_OPENMP="$FLY_OPENMP" \
 	    -DUSE_VULKAN=OFF \
 	    -DUSE_GLES=ON -DUSE_HOST_SDL=ON -DUSE_ALSA=OFF -DFLYCAST_LINK_MALI_SHIMS=ON -B .
 
