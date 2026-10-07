@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [clang-O3]
+        variant: [gcc-prof]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

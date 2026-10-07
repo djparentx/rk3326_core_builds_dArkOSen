@@ -34,8 +34,13 @@ TAG="v2.6"
 	      FLY_FLAGS="-O3 -march=armv8-a+crc -DNDEBUG"
 	      FLY_LINK="-fuse-ld=bfd"
 	      ;;
+	    gcc-prof)
+	      FLY_CC="gcc"; FLY_CXX="g++"
+	      FLY_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG -g1 -fno-omit-frame-pointer"
+	      FLY_LINK=""
+	      ;;
 	    *)
-	      echo "FLY_VARIANT must be one of: gcc-tune gcc-notune gcc-O3 clang-lto"
+	      echo "FLY_VARIANT must be one of: gcc-tune gcc-notune gcc-O3 clang-O3 gcc-prof"
 	      exit 1
 	      ;;
 	  esac
@@ -110,7 +115,9 @@ TAG="v2.6"
 		exit 1
 	  fi
 
-	  strip flycast
+	  if [[ "$FLY_VARIANT" != "gcc-prof" ]]; then
+		strip flycast
+	  fi
 
 	  if [ ! -d "../flycastsa-64/" ]; then
 		mkdir -v ../flycastsa-64
