@@ -34,7 +34,7 @@ TAG="v2.7"
 
 	  cd flycast/
 	  git checkout ${TAG}
-	  git submodule update --init --depth 1
+	  git submodule update --init --recursive --depth 1
 
 	  for patching in flycastsa-patch*
 	  do
