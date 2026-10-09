@@ -27,7 +27,7 @@ TAG="v2.7"
 		  echo "There was an error while cloning the flycast standalone git.  Stopping here."
 		  exit 1
 		fi
-		cp patches/flycastsa-patch* flycast/.
+		cp patches/flycastsa-patch* patches/flycastsa27-patch* flycast/.
 		cp mali/shims/gbm_shim.c flycast/.
 		cp mali/shims/wayland_egl_shim.c flycast/.
 	  fi
@@ -38,7 +38,7 @@ TAG="v2.7"
 
 	  rm -f flycastsa-patch-004-link-mali-shims.patch
 	  
-	  for patching in flycastsa-patch*
+	  for patching in flycastsa-patch* flycastsa27-patch*
 	  do
 		patch -Np1 < "$patching"
 		if [[ $? != "0" ]]; then

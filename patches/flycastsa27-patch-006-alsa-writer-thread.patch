@@ -1,0 +1,172 @@
+--- a/core/audio/audiobackend_alsa.cpp
++++ b/core/audio/audiobackend_alsa.cpp
+@@ -3,15 +3,35 @@
+ #include <alsa/asoundlib.h>
+ #include "cfg/cfg.h"
+ #include "cfg/option.h"
++#include <algorithm>
++#include <chrono>
++#include <condition_variable>
++#include <cstring>
++#include <mutex>
++#include <thread>
++#include <vector>
+ 
+ class AlsaAudioBackend : public AudioBackend
+ {
+ 	snd_pcm_t *handle = nullptr;
+-	bool pcm_blocking = true;
+ 	snd_pcm_uframes_t buffer_size = 0;
+ 	snd_pcm_uframes_t period_size = 0;
+ 	snd_pcm_t *handle_record = nullptr;
+ 
++	// Output FIFO between the emulation thread (push) and the ALSA writer thread
++	std::vector<u32> fifo;		// one u32 per stereo frame (2 x s16)
++	size_t fifoRead = 0;
++	size_t fifoWrite = 0;
++	size_t fifoFill = 0;
++	size_t primeFrames = 0;
++	bool primed = false;
++	bool writerRun = false;
++	int underruns = 0;
++	std::thread writer;
++	std::mutex fifoMutex;
++	std::condition_variable dataReady;
++	std::condition_variable spaceReady;
++
+ public:
+ 	AlsaAudioBackend()
+ 		: AudioBackend("alsa", "Advanced Linux Sound Architecture") {}
+@@ -156,6 +176,7 @@
+ 			return false;
+ 		}
+ 
++		startWriter();
+ 		return true;
+ 	}
+ 
+@@ -252,33 +273,108 @@
+ 		return err;
+ 	}
+ 
++	~AlsaAudioBackend() override
++	{
++		stopWriter();
++	}
++
+ 	u32 push(const void* frame, u32 samples, bool wait) override
+ 	{
+-		if (wait != pcm_blocking) {
+-			snd_pcm_nonblock(handle, wait ? 0 : 1);
+-			pcm_blocking = wait;
+-		}
++		std::unique_lock<std::mutex> lock(fifoMutex);
++		if (!writerRun)
++			return 1;
++		if (wait)
++			spaceReady.wait(lock, [this, samples] { return !writerRun || fifo.size() - fifoFill >= samples; });
++		if (!writerRun || fifo.size() - fifoFill < samples)
++			return 1;	// stopping, or not waiting and the FIFO is full: drop this block
++
++		const u32 *src = (const u32 *)frame;
++		size_t first = std::min<size_t>(samples, fifo.size() - fifoWrite);
++		memcpy(&fifo[fifoWrite], src, first * sizeof(u32));
++		if (samples > first)
++			memcpy(&fifo[0], src + first, (samples - first) * sizeof(u32));
++		fifoWrite = (fifoWrite + samples) % fifo.size();
++		fifoFill += samples;
++		dataReady.notify_one();
++		return 1;
++	}
+ 
+-		int rc = snd_pcm_writei(handle, frame, samples);
+-		if (rc < 0)
++	void writeChunk(const u32 *data, size_t frames)
++	{
++		int failures = 0;
++		while (frames > 0 && failures < 3)
+ 		{
+-			snd_pcm_recover(handle, rc, 1);
+-			if (rc == -EPIPE)
++			snd_pcm_sframes_t rc = snd_pcm_writei(handle, data, frames);
++			if (rc > 0)
+ 			{
+-				// EPIPE means underrun
+-				// Write some silence then our samples
+-				const size_t silence_size = buffer_size - samples;
+-				void *silence = alloca(silence_size * 4);
+-				memset(silence, 0, silence_size * 4);
+-				snd_pcm_writei(handle, silence, silence_size);
+-				snd_pcm_writei(handle, frame, samples);
++				data += rc;
++				frames -= rc;
++				continue;
+ 			}
++			failures++;
++			if (rc == -EPIPE)
++				NOTICE_LOG(AUDIO, "ALSA: underrun #%d", ++underruns);
++			if (rc < 0 && snd_pcm_recover(handle, (int)rc, 1) < 0)
++				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+ 		}
+-		return 1;
++	}
++
++	void writerLoop()
++	{
++		std::vector<u32> chunk(SAMPLE_COUNT);
++		std::unique_lock<std::mutex> lock(fifoMutex);
++		while (writerRun)
++		{
++			// First write waits for a cushion to be banked; afterwards write whatever is available
++			dataReady.wait(lock, [this] { return !writerRun || fifoFill >= (primed ? (size_t)1 : primeFrames); });
++			if (!writerRun)
++				break;
++			primed = true;
++			size_t n = std::min<size_t>(fifoFill, SAMPLE_COUNT);
++			size_t first = std::min<size_t>(n, fifo.size() - fifoRead);
++			memcpy(chunk.data(), &fifo[fifoRead], first * sizeof(u32));
++			if (n > first)
++				memcpy(chunk.data() + first, &fifo[0], (n - first) * sizeof(u32));
++			fifoRead = (fifoRead + n) % fifo.size();
++			fifoFill -= n;
++			spaceReady.notify_one();
++			lock.unlock();
++			writeChunk(chunk.data(), n);
++			lock.lock();
++		}
++	}
++
++	void startWriter()
++	{
++		size_t frames = std::max<size_t>((u32)config::AudioBufferSize, 2 * SAMPLE_COUNT);
++		frames -= frames % SAMPLE_COUNT;
++		{
++			std::lock_guard<std::mutex> lock(fifoMutex);
++			fifo.assign(frames, 0);
++			fifoRead = fifoWrite = fifoFill = 0;
++			primeFrames = frames / 2;
++			primed = false;
++			writerRun = true;
++			underruns = 0;
++		}
++		writer = std::thread(&AlsaAudioBackend::writerLoop, this);
++	}
++
++	void stopWriter()
++	{
++		{
++			std::lock_guard<std::mutex> lock(fifoMutex);
++			writerRun = false;
++		}
++		dataReady.notify_all();
++		spaceReady.notify_all();
++		if (writer.joinable())
++			writer.join();
+ 	}
+ 
+ 	void term() override
+ 	{
++		stopWriter();
+ 		snd_pcm_drop(handle);
+ 		snd_pcm_close(handle);
+ 	}
