@@ -36,6 +36,8 @@ TAG="v2.7"
 	  git checkout ${TAG}
 	  git submodule update --init --recursive --depth 1
 
+	  rm -f flycastsa-patch-004-link-mali-shims.patch
+	  
 	  for patching in flycastsa-patch*
 	  do
 		patch -Np1 < "$patching"
@@ -46,6 +48,8 @@ TAG="v2.7"
 		fi
 		rm "$patching"
 	  done
+
+	  printf '%s\n' '' 'if(FLYCAST_LINK_MALI_SHIMS)' '  target_sources(${PROJECT_NAME} PRIVATE gbm_shim.c wayland_egl_shim.c)' '  target_link_libraries(${PROJECT_NAME} PRIVATE gbm)' 'endif()' >> CMakeLists.txt
 
 	  cd $cur_wd
 	  rm -rf flycast-build
