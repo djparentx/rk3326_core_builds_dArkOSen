@@ -37,7 +37,7 @@ jobs:
               apt-get install -y build-essential git cmake pkg-config ccache libomp-dev \
                 libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
                 libevdev-dev libcurl4-openssl-dev zlib1g-dev libpng-dev \
-                libzip-dev liblzma-dev
+                libzip-dev liblzma-dev libasound2-dev
               mkdir -p /usr/local/lib/aarch64-linux-gnu
               ccache --max-size=2G
               ./builds.sh flycastsa27
