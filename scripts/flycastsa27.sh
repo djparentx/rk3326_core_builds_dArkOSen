@@ -13,7 +13,7 @@ TAG="v2.7"
 	# flycastsa27 build
 	if [[ "$var" == "flycastsa27" ]] && [[ "$bitness" == "64" ]]; then
 	  FLY_CC="gcc"; FLY_CXX="g++"
-	  FLY_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG"
+	  FLY_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG -g1"
 	  FLY_LINK=""
 	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"; FLY_BREAKPAD="ON"; FLY_OPENMP="ON"
 
@@ -86,8 +86,6 @@ TAG="v2.7"
 		echo "There was an error while building the flycast standalone emulator.  Stopping here."
 		exit 1
 	  fi
-
-	  strip flycast
 
 	  if [ ! -d "../flycastsa-64/" ]; then
 		mkdir -v ../flycastsa-64
