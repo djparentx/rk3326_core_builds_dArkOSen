@@ -13,7 +13,7 @@ TAG="v2.7"
 	# flycastsa27 build
 	if [[ "$var" == "flycastsa27" ]] && [[ "$bitness" == "64" ]]; then
 	  FLY_CC="gcc"; FLY_CXX="g++"
-	  FLY_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG -g1"
+	  FLY_FLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG"
 	  FLY_LINK=""
 	  FLY_AR="/usr/bin/ar"; FLY_RANLIB="/usr/bin/ranlib"; FLY_BREAKPAD="ON"; FLY_OPENMP="ON"
 
@@ -35,6 +35,14 @@ TAG="v2.7"
 	  cd flycast/
 	  git checkout ${TAG}
 	  git submodule update --init --recursive --depth 1
+	  if [ ! -d "core/deps/soundtouch" ]; then
+		git clone https://github.com/stenzek/soundtouch.git core/deps/soundtouch && git -C core/deps/soundtouch checkout b281fda49645c158c2085e1f2e0c3b82c84379ac
+		if [[ $? != "0" ]]; then
+		  echo " "
+		  echo "There was an error while cloning soundtouch.  Stopping here."
+		  exit 1
+		fi
+	  fi
 
 	  rm -f flycastsa-patch-004-link-mali-shims.patch
 	  
@@ -50,7 +58,6 @@ TAG="v2.7"
 	  done
 
 	  printf '%s\n' '' 'if(FLYCAST_LINK_MALI_SHIMS)' '  target_sources(${PROJECT_NAME} PRIVATE gbm_shim.c wayland_egl_shim.c)' '  target_link_libraries(${PROJECT_NAME} PRIVATE gbm)' 'endif()' >> CMakeLists.txt
-	  sed -i 's/LINK_FLAGS_RELEASE -s)/LINK_FLAGS_RELEASE "")/' CMakeLists.txt
 	  
 	  cd $cur_wd
 	  rm -rf flycast-build

@@ -1,0 +1,118 @@
+--- a/core/audio/audiobackend_alsa.cpp
++++ b/core/audio/audiobackend_alsa.cpp
+@@ -10,6 +10,7 @@
+ #include <mutex>
+ #include <thread>
+ #include <vector>
++#include <soundtouch/SoundTouch.h>
+ 
+ class AlsaAudioBackend : public AudioBackend
+ {
+@@ -32,6 +33,11 @@
+ 	std::condition_variable dataReady;
+ 	std::condition_variable spaceReady;
+ 
++	// Time-stretch (tempo change without pitch change), used by the writer thread only
++	soundtouch::SoundTouch stretcher;
++	static constexpr unsigned int STRETCH_OUT_FRAMES = 2048;
++	static constexpr double MIN_TEMPO = 0.5;
++
+ public:
+ 	AlsaAudioBackend()
+ 		: AudioBackend("alsa", "Advanced Linux Sound Architecture") {}
+@@ -322,6 +328,13 @@
+ 	void writerLoop()
+ 	{
+ 		std::vector<u32> chunk(SAMPLE_COUNT);
++		std::vector<float> stIn(SAMPLE_COUNT * 2);
++		std::vector<float> stOut(STRETCH_OUT_FRAMES * 2);
++		std::vector<s16> pcm(STRETCH_OUT_FRAMES * 2);
++		const double target = (double)std::max<size_t>(buffer_size, 4 * SAMPLE_COUNT);
++		double tempo = 1.0;
++		double tempoSum = 0.0;
++		int tempoCount = 0;
+ 		std::unique_lock<std::mutex> lock(fifoMutex);
+ 		while (writerRun)
+ 		{
+@@ -337,9 +350,38 @@
+ 				memcpy(chunk.data() + first, &fifo[0], (n - first) * sizeof(u32));
+ 			fifoRead = (fifoRead + n) % fifo.size();
+ 			fifoFill -= n;
++			size_t queued = fifoFill;
+ 			spaceReady.notify_one();
+ 			lock.unlock();
+-			writeChunk(chunk.data(), n);
++
++			// Audio banked ahead of the speaker: FIFO + ALSA buffer + stretcher output
++			snd_pcm_sframes_t avail = snd_pcm_avail(handle);
++			size_t inAlsa = (avail >= 0 && (snd_pcm_uframes_t)avail < buffer_size) ? buffer_size - (size_t)avail : 0;
++			double banked = (double)(queued + inAlsa + stretcher.numSamples());
++			// When the emulator produces audio slower than it plays, stretch it (pitch unchanged) instead of running dry
++			double wanted = std::min(1.0, std::max(MIN_TEMPO, banked / target));
++			tempo += (wanted - tempo) * 0.1;
++			stretcher.setTempo(tempo);
++
++			const s16 *src = (const s16 *)chunk.data();
++			for (size_t i = 0; i < n * 2; i++)
++				stIn[i] = (float)src[i];
++			stretcher.putSamples(stIn.data(), (unsigned int)n);
++			unsigned int got;
++			while ((got = stretcher.receiveSamples(stOut.data(), STRETCH_OUT_FRAMES)) > 0)
++			{
++				for (unsigned int i = 0; i < got * 2; i++)
++					pcm[i] = (s16)std::clamp(stOut[i], -32768.f, 32767.f);
++				writeChunk((const u32 *)pcm.data(), got);
++			}
++
++			tempoSum += tempo;
++			if (++tempoCount == 430)	// about every 5 seconds
++			{
++				NOTICE_LOG(AUDIO, "ALSA: average tempo %.3f, underruns %d", tempoSum / tempoCount, underruns);
++				tempoSum = 0.0;
++				tempoCount = 0;
++			}
+ 			lock.lock();
+ 		}
+ 	}
+@@ -357,6 +399,12 @@
+ 			writerRun = true;
+ 			underruns = 0;
+ 		}
++		stretcher.clear();
++		stretcher.setChannels(2);
++		stretcher.setSampleRate(44100);
++		stretcher.setSetting(SETTING_USE_QUICKSEEK, 1);
++		stretcher.setSetting(SETTING_USE_AA_FILTER, 0);
++		stretcher.setTempo(1.0);
+ 		writer = std::thread(&AlsaAudioBackend::writerLoop, this);
+ 	}
+ 
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1531,3 +1531,26 @@
+ 	file(GLOB_RECURSE SRC_FILES *.h *.cpp *.c *.cc *.mm)
+ 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC_FILES})
+ endif()
++
++# Time-stretch library for the ALSA audio backend (cloned into core/deps/soundtouch by the build script)
++if(USE_ALSA AND ALSA_FOUND AND NOT ANDROID)
++	add_library(flycast_soundtouch STATIC
++		core/deps/soundtouch/source/SoundTouch/AAFilter.cpp
++		core/deps/soundtouch/source/SoundTouch/BPMDetect.cpp
++		core/deps/soundtouch/source/SoundTouch/cpu_detect_x86.cpp
++		core/deps/soundtouch/source/SoundTouch/FIFOSampleBuffer.cpp
++		core/deps/soundtouch/source/SoundTouch/FIRFilter.cpp
++		core/deps/soundtouch/source/SoundTouch/InterpolateCubic.cpp
++		core/deps/soundtouch/source/SoundTouch/InterpolateLinear.cpp
++		core/deps/soundtouch/source/SoundTouch/InterpolateShannon.cpp
++		core/deps/soundtouch/source/SoundTouch/mmx_optimized.cpp
++		core/deps/soundtouch/source/SoundTouch/PeakFinder.cpp
++		core/deps/soundtouch/source/SoundTouch/RateTransposer.cpp
++		core/deps/soundtouch/source/SoundTouch/SoundTouch.cpp
++		core/deps/soundtouch/source/SoundTouch/sse_optimized.cpp
++		core/deps/soundtouch/source/SoundTouch/TDStretch.cpp
++	)
++	target_include_directories(flycast_soundtouch PUBLIC core/deps/soundtouch/include PRIVATE core/deps/soundtouch/include/soundtouch)
++	target_compile_definitions(flycast_soundtouch PRIVATE SOUNDTOUCH_FLOAT_SAMPLES)
++	target_link_libraries(${PROJECT_NAME} PRIVATE flycast_soundtouch)
++endif()
