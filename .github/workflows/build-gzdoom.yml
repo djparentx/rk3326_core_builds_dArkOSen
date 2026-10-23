@@ -1,0 +1,55 @@
+name: Build GZDoom Standalone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-gzdoom-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: gzdoom-ccache-${{ runner.os }}-${{ hashFiles('patches/gzdoomsa-patch*', 'scripts/gzdoom.sh') }}
+          restore-keys: |
+            gzdoom-ccache-${{ runner.os }}-
+
+      - name: Build GZDoom in aarch64 Debian Trixie container
+        run: |
+          mkdir -p ${{ github.workspace }}/.ccache
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e CCACHE_DIR=/workspace/.ccache \
+            -e CMAKE_C_COMPILER_LAUNCHER=ccache \
+            -e CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config ccache wget ca-certificates
+              ccache --max-size=2G
+              ./builds.sh gzdoom
+              cp -a /usr/local/lib/libzmusic.so* gzdoom64/
+              ccache --show-stats
+            "
+
+      - name: Debug - list build output
+        run: ls -la gzdoom64
+
+      - name: Upload built GZDoom
+        uses: actions/upload-artifact@v4
+        with:
+          name: gzdoom-standalone
+          if-no-files-found: error
+          path: gzdoom64/

@@ -1,0 +1,54 @@
+diff --git a/libraries/ZWidget/src/window/sdl2/sdl2displaywindow.cpp b/libraries/ZWidget/src/window/sdl2/sdl2displaywindow.cpp
+index 17db8a8..e4afcf1 100644
+--- a/libraries/ZWidget/src/window/sdl2/sdl2displaywindow.cpp
++++ b/libraries/ZWidget/src/window/sdl2/sdl2displaywindow.cpp
+@@ -16,6 +16,13 @@ public:
+ 			throw std::runtime_error(std::string("Unable to initialize SDL:") + SDL_GetError());
+ 
+ 		SDL2DisplayWindow::PaintEventNumber = SDL_RegisterEvents(1);
++
++		// dArkOSen: open gamepads so the IWAD launcher can be driven by the D-pad
++		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) == 0)
++		{
++			for (int i = 0; i < SDL_NumJoysticks(); i++)
++				SDL_JoystickOpen(i);
++		}
+ 	}
+ };
+ 
+@@ -342,6 +349,15 @@ SDL2DisplayWindow* SDL2DisplayWindow::FindEventWindow(const SDL_Event& event)
+ 	case SDL_MOUSEBUTTONDOWN: windowID = event.button.windowID; break;
+ 	case SDL_MOUSEWHEEL: windowID = event.wheel.windowID; break;
+ 	case SDL_MOUSEMOTION: windowID = event.motion.windowID; break;
++	case SDL_JOYBUTTONDOWN:
++	case SDL_JOYHATMOTION:
++	{
++		SDL_Window* focus = SDL_GetKeyboardFocus();
++		if (focus) windowID = SDL_GetWindowID(focus);
++		else if (!WindowList.empty()) return WindowList.begin()->second;
++		else return nullptr;
++		break;
++	}
+ 	default:
+ 		if (event.type == PaintEventNumber) windowID = event.user.windowID;
+ 		else return nullptr;
+@@ -366,6 +382,18 @@ void SDL2DisplayWindow::DispatchEvent(const SDL_Event& event)
+ 	case SDL_MOUSEBUTTONDOWN: window->OnMouseButtonDown(event.button); break;
+ 	case SDL_MOUSEWHEEL: window->OnMouseWheel(event.wheel); break;
+ 	case SDL_MOUSEMOTION: window->OnMouseMotion(event.motion); break;
++	case SDL_JOYBUTTONDOWN:
++		switch (event.jbutton.button)
++		{
++		case 8: window->WindowHost->OnWindowKeyDown(IK_Up); break;
++		case 9: window->WindowHost->OnWindowKeyDown(IK_Down); break;
++		case 1: window->WindowHost->OnWindowKeyDown(IK_Enter); break;
++		}
++		break;
++	case SDL_JOYHATMOTION:
++		if (event.jhat.value & SDL_HAT_UP) window->WindowHost->OnWindowKeyDown(IK_Up);
++		else if (event.jhat.value & SDL_HAT_DOWN) window->WindowHost->OnWindowKeyDown(IK_Down);
++		break;
+ 	default:
+ 		if (event.type == PaintEventNumber) window->OnPaintEvent();
+ 	}
+
