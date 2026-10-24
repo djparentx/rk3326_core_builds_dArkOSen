@@ -1,0 +1,55 @@
+name: Build DSperate Standalone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-dsperate-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: dsperate-ccache-${{ runner.os }}-${{ hashFiles('patches/dsperate-patch*', 'scripts/dsperate.sh') }}
+          restore-keys: |
+            dsperate-ccache-${{ runner.os }}-
+
+      - name: Build DSperate in aarch64 Debian Trixie container
+        run: |
+          mkdir -p ${{ github.workspace }}/.ccache
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e CCACHE_DIR=/workspace/.ccache \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake ninja-build pkg-config ccache \
+                libsdl2-dev
+              mkdir -p /usr/local/lib/aarch64-linux-gnu
+              ccache --max-size=2G
+              ./builds.sh dsperate
+              ccache --show-stats
+              echo '--- NEEDED libs ---'
+              readelf -d dsperate-64/dsperate | grep NEEDED
+            "
+
+      - name: Upload built DSperate
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsperate-build
+          if-no-files-found: error
+          path: |
+            dsperate-64/dsperate
+            dsperate-64/default.ini
+            dsperate-64/dsperate.commit
