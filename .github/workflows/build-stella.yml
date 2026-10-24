@@ -1,0 +1,46 @@
+name: Build Stella libretro core
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-stella-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build Stella in aarch64 Debian Trixie container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git pkg-config
+              mkdir -p /usr/local/lib/aarch64-linux-gnu
+              ./builds.sh stella
+              echo '--- NEEDED libs ---'
+              readelf -d cores64/stella_libretro.so | grep NEEDED
+              if readelf -d cores64/stella_libretro.so | grep -q libiconv; then
+                echo 'ERROR: stella_libretro.so still links libiconv'
+                exit 1
+              fi
+            "
+          sudo rm -rf stella
+
+      - name: Upload Stella core
+        uses: actions/upload-artifact@v4
+        with:
+          name: stella-libretro
+          if-no-files-found: error
+          path: |
+            cores64/stella_libretro.so
+            cores64/stella_libretro.so.commit
