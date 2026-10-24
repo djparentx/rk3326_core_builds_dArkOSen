@@ -60,6 +60,7 @@ bitness="$(getconf LONG_BIT)"
                  -DDSPERATE_WAYLAND=OFF \
                  -DDSPERATE_PGO=OFF \
                  -DDSPERATE_TUNE=-mtune=cortex-a35 \
+                 -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined \
                  $ccache_args \
                  --preset host
 
