@@ -19,9 +19,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.ccache
-          key: dsperate-ccache-${{ runner.os }}-${{ hashFiles('patches/dsperate-patch*', 'scripts/dsperate.sh') }}
+          key: dsperate-gcc12-ccache-${{ runner.os }}-${{ hashFiles('patches/dsperate-patch*', 'scripts/dsperate.sh') }}
           restore-keys: |
-            dsperate-ccache-${{ runner.os }}-
+            dsperate-gcc12-ccache-${{ runner.os }}-
 
       - name: Build DSperate in aarch64 Debian Trixie container
         run: |
@@ -35,7 +35,7 @@ jobs:
               set -e
               apt-get update
               apt-get install -y build-essential git cmake ninja-build pkg-config ccache \
-                libsdl2-dev
+                gcc-12 g++-12 libsdl2-dev
               mkdir -p /usr/local/lib/aarch64-linux-gnu
               ccache --max-size=2G
               ./builds.sh dsperate

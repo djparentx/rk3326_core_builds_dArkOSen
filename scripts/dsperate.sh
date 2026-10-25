@@ -50,16 +50,29 @@ bitness="$(getconf LONG_BIT)"
 	  done
 	 fi
 
+	 # dArkOSen: portrait panel that SDL presents as landscape -> use DSperate's own kms scanout + NEON rotation
+	 sed -i 's|      if (m.hdisplay == w \&\& m.vdisplay == h) { mode = m; found = true; break; }|      if ((m.hdisplay == w \&\& m.vdisplay == h) \|\| (m.hdisplay == h \&\& m.vdisplay == w)) { mode = m; w_ = m.hdisplay; h_ = m.vdisplay; found = true; break; }|' src/frontend/sdl/display_drm.cpp
+	 sed -i 's|  if (!dr->open(win_, ow, oh, display_index_)) { scaled_ = false; rot_ = 0; return false; }|&\n  if (!rot_ \&\& ow != oh \&\& dr->width() == oh \&\& dr->height() == ow) rot_ = 270;|' src/frontend/sdl/display.cpp
+	 sed -i 's|  if (out_) { SDL_GetWindowSize(win_, \&w, \&h); if (rotated()) std::swap(w, h); return w > 0 \&\& h > 0; }|  if (out_) { SDL_GetWindowSize(win_, \&w, \&h); if (w == out_->height() \&\& h == out_->width()) { w = out_->width(); h = out_->height(); } if (rotated()) std::swap(w, h); return w > 0 \&\& h > 0; }|' src/frontend/sdl/display.cpp
+
+	 # dArkOSen defaults: no realtime, select = hotkey modifier
+	 sed -i 's|^# realtime = rr |realtime = off |' configs/default.ini
+	 sed -i 's|^# modifier = guide|modifier = back|' configs/default.ini
+	 sed -i 's|^# quit = mod+start+back|quit = mod+start|' configs/default.ini
+	 sed -i 's|^# pause = mod+start$|pause = mod+a|' configs/default.ini
+	 sed -i 's|^# layout_next = mod+back|layout_next = mod+b|' configs/default.ini
+
 	 ccache_args=""
 	 if command -v ccache > /dev/null; then
 	   ccache_args="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
 	 fi
 
-           cmake -DDSPERATE_TESTS=OFF \
+           cmake -DCMAKE_C_COMPILER=gcc-12 \
+                 -DCMAKE_CXX_COMPILER=g++-12 \
+                 -DDSPERATE_TESTS=OFF \
                  -DDSPERATE_HEADLESS=OFF \
                  -DDSPERATE_WAYLAND=OFF \
-                 -DDSPERATE_PGO=OFF \
-                 -DDSPERATE_TUNE=-mtune=cortex-a35 \
+                 -DDSPERATE_PGO=use \
                  -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined \
                  $ccache_args \
                  --preset host
