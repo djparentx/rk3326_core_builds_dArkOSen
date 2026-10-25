@@ -68,6 +68,7 @@ bitness="$(getconf LONG_BIT)"
 	 sed -i 's|^# layout_next = mod+back$|layout_next = mod+b|' configs/default.ini
 	 sed -i 's|^# layout_prev = mod+x$|layout_prev = mod+a|' configs/default.ini
 	 sed -i 's|^# screen_swap = mod+y$|screen_swap = mod+y|' configs/default.ini
+	 sed -i 's|^# face_fix = auto |face_fix = off |' configs/default.ini
 
 	 ccache_args=""
 	 if command -v ccache > /dev/null; then
