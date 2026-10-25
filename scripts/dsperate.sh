@@ -56,12 +56,18 @@ bitness="$(getconf LONG_BIT)"
 	 sed -i 's|  if (out_) { SDL_GetWindowSize(win_, \&w, \&h); if (rotated()) std::swap(w, h); return w > 0 \&\& h > 0; }|  if (out_) { SDL_GetWindowSize(win_, \&w, \&h); if (w == out_->height() \&\& h == out_->width()) { w = out_->width(); h = out_->height(); } if (rotated()) std::swap(w, h); return w > 0 \&\& h > 0; }|' src/frontend/sdl/display.cpp
 	 sed -i 's|    if (w != out_->width() \|\| h != out_->height()) {|    if ((w != out_->width() \|\| h != out_->height()) \&\& !(w == out_->height() \&\& h == out_->width())) {|' src/frontend/sdl/display.cpp
 
-	 # dArkOSen defaults: no realtime, select = hotkey modifier
+	 # dArkOSen defaults: no realtime, adaptive frameskip, select = hotkey modifier
 	 sed -i 's|^# realtime = rr |realtime = off |' configs/default.ini
-	 sed -i 's|^# modifier = guide|modifier = back|' configs/default.ini
-	 sed -i 's|^# quit = mod+start+back|quit = mod+start|' configs/default.ini
-	 sed -i 's|^# pause = mod+start$|pause = mod+a|' configs/default.ini
-	 sed -i 's|^# layout_next = mod+back|layout_next = mod+b|' configs/default.ini
+	 sed -i 's|^# frameskip = 0 |frameskip = 2 |' configs/default.ini
+	 sed -i 's|^# modifier = guide$|modifier = back|' configs/default.ini
+	 sed -i 's|^# quit = mod+start+back$|quit = mod+start|' configs/default.ini
+	 sed -i 's|^# pause = mod+start$|pause = mod+x|' configs/default.ini
+	 sed -i 's|^# fast_forward = mod++righttrigger$|fast_forward = mod+dpup|' configs/default.ini
+	 sed -i 's|^# save_state = mod+rightshoulder$|save_state = mod++righttrigger|' configs/default.ini
+	 sed -i 's|^# load_state = mod+leftshoulder$|load_state = mod++lefttrigger|' configs/default.ini
+	 sed -i 's|^# layout_next = mod+back$|layout_next = mod+b|' configs/default.ini
+	 sed -i 's|^# layout_prev = mod+x$|layout_prev = mod+a|' configs/default.ini
+	 sed -i 's|^# screen_swap = mod+y$|screen_swap = mod+y|' configs/default.ini
 
 	 ccache_args=""
 	 if command -v ccache > /dev/null; then
