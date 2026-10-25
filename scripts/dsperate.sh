@@ -54,6 +54,7 @@ bitness="$(getconf LONG_BIT)"
 	 sed -i 's|      if (m.hdisplay == w \&\& m.vdisplay == h) { mode = m; found = true; break; }|      if ((m.hdisplay == w \&\& m.vdisplay == h) \|\| (m.hdisplay == h \&\& m.vdisplay == w)) { mode = m; w_ = m.hdisplay; h_ = m.vdisplay; found = true; break; }|' src/frontend/sdl/display_drm.cpp
 	 sed -i 's|  if (!dr->open(win_, ow, oh, display_index_)) { scaled_ = false; rot_ = 0; return false; }|&\n  if (!rot_ \&\& ow != oh \&\& dr->width() == oh \&\& dr->height() == ow) rot_ = 270;|' src/frontend/sdl/display.cpp
 	 sed -i 's|  if (out_) { SDL_GetWindowSize(win_, \&w, \&h); if (rotated()) std::swap(w, h); return w > 0 \&\& h > 0; }|  if (out_) { SDL_GetWindowSize(win_, \&w, \&h); if (w == out_->height() \&\& h == out_->width()) { w = out_->width(); h = out_->height(); } if (rotated()) std::swap(w, h); return w > 0 \&\& h > 0; }|' src/frontend/sdl/display.cpp
+	 sed -i 's|    if (w != out_->width() \|\| h != out_->height()) {|    if ((w != out_->width() \|\| h != out_->height()) \&\& !(w == out_->height() \&\& h == out_->width())) {|' src/frontend/sdl/display.cpp
 
 	 # dArkOSen defaults: no realtime, select = hotkey modifier
 	 sed -i 's|^# realtime = rr |realtime = off |' configs/default.ini
