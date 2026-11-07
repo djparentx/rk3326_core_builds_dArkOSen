@@ -62,8 +62,8 @@ tag="v1.22.2"
 	    --disable-qt \
 	    --disable-sdl \
 	    --disable-vg \
-	    --disable-vulkan \
-	    --disable-vulkan_display \
+	    --enable-vulkan \
+	    --enable-vulkan_display \
 	    --disable-wayland \
 	    --disable-x11 \
             --disable-jack \
@@ -98,8 +98,8 @@ tag="v1.22.2"
 	    --disable-qt \
 	    --disable-sdl \
 	    --disable-vg \
-	    --disable-vulkan \
-	    --disable-vulkan_display \
+	    --enable-vulkan \
+	    --enable-vulkan_display \
 	    --disable-wayland \
 	    --disable-x11 \
             --disable-jack \

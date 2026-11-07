@@ -87,7 +87,7 @@ cmake -B build -G Ninja \
   -DBUILD_MINI_FRONTEND=ON \
   -DENABLE_X11=OFF \
   -DENABLE_WAYLAND=OFF \
-  -DENABLE_VULKAN=OFF \
+  -DENABLE_VULKAN=ON \
   -DHOST_MIN_PAGE_SIZE=4096 \
   -DHOST_MAX_PAGE_SIZE=16384 \
   -DHOST_CACHE_LINE_SIZE=64
@@ -116,6 +116,9 @@ while [ ${#queue[@]} -gt 0 ]; do
       queue+=("$OUT/bin/lib/$need")
     fi
   done
+done
+for dyn in libshaderc_shared.so libspirv-cross-c-shared.so.0; do
+  cp -L "$PACKLIB/$dyn" "$OUT/bin/lib/$dyn"
 done
 ls -l "$OUT/bin/lib"
 

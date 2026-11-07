@@ -76,7 +76,7 @@ fi
                -DSDL_UNIX_CONSOLE_BUILD=ON \
                -DSDL_X11=OFF \
                -DSDL_WAYLAND=OFF \
-               -DSDL_VULKAN=OFF \
+               -DSDL_VULKAN=ON \
                -DSDL_PIPEWIRE=OFF \
                -DSDL_PULSEAUDIO=OFF \
                -DSDL_TESTS=OFF \

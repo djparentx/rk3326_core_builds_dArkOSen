@@ -119,7 +119,7 @@ TAG="g4.14.2"
            cmake -DNO_GTK=ON \
                  -DCMAKE_BUILD_TYPE=Release \
                  -DHAVE_GLES2=ON \
-                 -DHAVE_VULKAN=OFF \
+                 -DHAVE_VULKAN=ON \
                  ..
            if [[ $? != "0" ]]; then
 	         echo " "

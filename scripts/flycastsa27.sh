@@ -83,7 +83,7 @@ TAG="v2.7"
 	    -DWITH_SYSTEM_ZLIB=ON \
 	    -DUSE_PULSEAUDIO=OFF \
 	    -DUSE_OPENMP="$FLY_OPENMP" \
-	    -DUSE_VULKAN=OFF \
+	    -DUSE_VULKAN=ON \
 	    -DUSE_GLES=ON -DUSE_HOST_SDL=ON -DUSE_ALSA=ON -DFLYCAST_LINK_MALI_SHIMS=ON -B .
 
 	  make -j$(nproc) 2>&1 | tee make.log
