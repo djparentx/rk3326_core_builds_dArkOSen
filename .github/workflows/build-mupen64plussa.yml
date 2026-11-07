@@ -35,7 +35,7 @@ jobs:
               set -e
               apt-get update
               apt-get install -y build-essential git cmake pkg-config ccache \
-                libsdl2-dev libpng-dev zlib1g-dev libfreetype-dev libminizip-dev \
+                libsdl2-dev libpng-dev zlib1g-dev libfreetype-dev \
                 libegl1-mesa-dev libgles2-mesa-dev libgl-dev libglu1-mesa-dev \
                 libspeexdsp-dev libsamplerate0-dev \
                 libboost-dev libboost-filesystem-dev libboost-system-dev
