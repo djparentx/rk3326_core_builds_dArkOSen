@@ -26,7 +26,7 @@ jobs:
               apt-get update
               apt-get install -y build-essential git cmake pkg-config \
                 libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
-                libasound2-dev libfreetype6-dev libudev-dev zlib1g-dev
+                libasound2-dev libfreetype6-dev libudev-dev zlib1g-dev libvulkan-dev
 
               ln -s /usr/include/libdrm/ /usr/include/drm
               mv /usr/bin/gcc /usr/bin/gcc.real
@@ -76,7 +76,7 @@ jobs:
               apt-get update
               apt-get install -y build-essential git cmake pkg-config \
                 libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
-                libasound2-dev libfreetype6-dev libudev-dev zlib1g-dev
+                libasound2-dev libfreetype6-dev libudev-dev zlib1g-dev libvulkan-dev
 
               ln -s /usr/include/libdrm/ /usr/include/drm
               mv /usr/bin/gcc /usr/bin/gcc.real
