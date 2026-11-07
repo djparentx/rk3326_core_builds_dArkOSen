@@ -1,0 +1,54 @@
+name: Build Mupen64Plus Standalone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-mupen64plussa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: mupen64plussa-ccache-${{ hashFiles('patches/mupen64plus*', 'scripts/mupen64plus*.sh') }}
+          restore-keys: |
+            mupen64plussa-ccache-
+
+      - name: Build Mupen64Plus standalone in aarch64 Debian Trixie container
+        run: |
+          mkdir -p ${{ github.workspace }}/.ccache
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e CCACHE_DIR=/workspace/.ccache \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config ccache \
+                libsdl2-dev libpng-dev zlib1g-dev libfreetype-dev libminizip-dev \
+                libegl1-mesa-dev libgles2-mesa-dev libgl-dev libglu1-mesa-dev \
+                libspeexdsp-dev libsamplerate0-dev \
+                libboost-dev libboost-filesystem-dev libboost-system-dev
+              mkdir -p /usr/local/lib/aarch64-linux-gnu
+              export PATH=/usr/lib/ccache:\$PATH
+              ccache --max-size=2G
+              ./builds.sh mupen64plussa
+              ccache --show-stats
+            "
+
+      - name: Upload Mupen64Plus package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mupen64plussa
+          if-no-files-found: error
+          path: mupen64plussa-64/mupen64plus-*.tar.gz

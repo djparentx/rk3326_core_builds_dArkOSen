@@ -11,8 +11,8 @@
 
 	  # Now we'll start the clone and build of mupen64plus-audio-sdl
 	  if [ ! -d "mupen64plus-audio-sdl/" ]; then
-		#git clone --depth=1 https://github.com/mupen64plus/mupen64plus-audio-sdl.git
-		git clone --depth=1 https://github.com/OtherCrashOverride/mupen64plus-audio-sdl-go2.git -b libgo2 mupen64plus-audio-sdl
+		git clone --depth=1 https://github.com/mupen64plus/mupen64plus-audio-sdl.git
+		#git clone --depth=1 https://github.com/OtherCrashOverride/mupen64plus-audio-sdl-go2.git -b libgo2 mupen64plus-audio-sdl
 		if [[ $? != "0" ]]; then
 		  echo " "
 		  echo "There was an error while cloning the mupen64plus-audio-sdl standalone git.  Is Internet active or did the git location change?  Stopping here."
@@ -46,10 +46,10 @@
       if [[ "$bitness" == "32" ]]; then
         _opts='USE_GLES=1 NEON=1 VFP_HARD=1 OPTFLAGS="-O3" V=1 PIE=1'
       else
-        _opts='USE_GLES=1 NEW_DYNAREC=1 OPTFLAGS="-O3" V=1 PIE=1'
+        _opts='USE_GLES=1 NEW_DYNAREC=1 OPTFLAGS="-Ofast" V=1 PIE=1'
       fi
       
-      export CFLAGS="-mtune=cortex-a35 -flto=$(nproc) -fuse-linker-plugin"
+      export CFLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG -flto=$(nproc) -fuse-linker-plugin"
       export CXXFLAGS="$CXXFLAGS $CFLAGS"
       export LDFLAGS="$CFLAGS"
       

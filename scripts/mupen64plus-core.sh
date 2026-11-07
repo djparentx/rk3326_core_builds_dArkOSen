@@ -49,10 +49,10 @@
       if [[ "$bitness" == "32" ]]; then
         _opts='VULKAN=0 USE_GLES=1 NEON=1 VFP_HARD=1 OPTFLAGS="-O3" V=1 PIE=1 ACCURATE_FPU=1'
       else
-        _opts='VULKAN=0 USE_GLES=1 NEW_DYNAREC=1 OPTFLAGS="-O3" V=1 PIE=1 ACCURATE_FPU=1'
+        _opts='VULKAN=0 USE_GLES=1 NEW_DYNAREC=1 OPTFLAGS="-Ofast" V=1 PIE=1 ACCURATE_FPU=1'
       fi
       
-      export CFLAGS="-mtune=cortex-a35 -flto=$(nproc) -fuse-linker-plugin"
+      export CFLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG -flto=$(nproc) -fuse-linker-plugin"
       export CXXFLAGS="$CXXFLAGS $CFLAGS"
       export LDFLAGS="$CFLAGS"
       
