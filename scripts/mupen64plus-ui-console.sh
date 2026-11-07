@@ -50,7 +50,7 @@
       
       export CFLAGS="-Ofast -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -DNDEBUG -flto=$(nproc) -fuse-linker-plugin"
       export CXXFLAGS="$CXXFLAGS $CFLAGS"
-      export LDFLAGS="$CFLAGS"
+      export LDFLAGS="$CFLAGS -Wl,--allow-shlib-undefined"
       
       make -C "projects/unix" clean
 	  make -j$(nproc) -C "projects/unix" $_opts all
