@@ -1,0 +1,177 @@
+diff --git a/Common/GPU/Vulkan/VulkanContext.cpp b/Common/GPU/Vulkan/VulkanContext.cpp
+index c9c53b5..ce1624c 100644
+--- a/Common/GPU/Vulkan/VulkanContext.cpp
++++ b/Common/GPU/Vulkan/VulkanContext.cpp
+@@ -779,8 +779,111 @@ VkResult VulkanContext::ReinitSurface() {
+ #if defined(VK_USE_PLATFORM_DISPLAY_KHR)
+ 	case WINDOWSYSTEM_DISPLAY:
+ 	{
++		// Backported from upstream PPSSPP (VK_KHR_display, no X11/Wayland).
+ 		VkDisplaySurfaceCreateInfoKHR display{ VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR };
++		VkPhysicalDevice phys_device = physical_devices_[physical_device_];
++		VkDisplayPlaneAlphaFlagBitsKHR alpha_mode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
++
++		if (!vkGetPhysicalDeviceDisplayPropertiesKHR ||
++		    !vkGetPhysicalDeviceDisplayPlanePropertiesKHR ||
++		    !vkGetDisplayModePropertiesKHR ||
++		    !vkGetDisplayPlaneSupportedDisplaysKHR ||
++		    !vkGetDisplayPlaneCapabilitiesKHR) {
++			ERROR_LOG(G3D, "DISPLAY Vulkan cannot find the VK_KHR_display function symbols.");
++			return VK_ERROR_INITIALIZATION_FAILED;
++		}
++
++		// Displays on the physical device (Vulkan only counts connected ones).
++		uint32_t display_count = 0;
++		vkGetPhysicalDeviceDisplayPropertiesKHR(phys_device, &display_count, nullptr);
++		if (display_count == 0) {
++			ERROR_LOG(G3D, "DISPLAY Vulkan couldn't find any displays.");
++			return VK_ERROR_INITIALIZATION_FAILED;
++		}
++		std::vector<VkDisplayPropertiesKHR> display_props(display_count);
++		vkGetPhysicalDeviceDisplayPropertiesKHR(phys_device, &display_count, display_props.data());
++
++		// Display planes on the physical device.
++		uint32_t plane_count = 0;
++		vkGetPhysicalDeviceDisplayPlanePropertiesKHR(phys_device, &plane_count, nullptr);
++		if (plane_count == 0) {
++			ERROR_LOG(G3D, "DISPLAY Vulkan couldn't find any planes on the physical device.");
++			return VK_ERROR_INITIALIZATION_FAILED;
++		}
++		std::vector<VkDisplayPlanePropertiesKHR> plane_props(plane_count);
++		vkGetPhysicalDeviceDisplayPlanePropertiesKHR(phys_device, &plane_count, plane_props.data());
++
++		// Use the first connected display.
++		VkDisplayKHR myDisplay = display_props[0].display;
++
++		// Modes of that display.
++		uint32_t mode_count = 0;
++		vkGetDisplayModePropertiesKHR(phys_device, myDisplay, &mode_count, nullptr);
++		if (mode_count == 0) {
++			ERROR_LOG(G3D, "DISPLAY Vulkan couldn't find any video modes on the display.");
++			return VK_ERROR_INITIALIZATION_FAILED;
++		}
++		std::vector<VkDisplayModePropertiesKHR> mode_props(mode_count);
++		vkGetDisplayModePropertiesKHR(phys_device, myDisplay, &mode_count, mode_props.data());
++
++		// Prefer a mode matching pixel_xres/pixel_yres, otherwise the display's first (native) mode.
++		// pixel_xres/yres are still 320x240 here (patch-003) until the first SDL resize event.
++		uint32_t mode_index = 0;
++		for (uint32_t i = 0; i < mode_count; i++) {
++			if ((int)mode_props[i].parameters.visibleRegion.width == pixel_xres &&
++			    (int)mode_props[i].parameters.visibleRegion.height == pixel_yres) {
++				mode_index = i;
++				break;
++			}
++		}
++		VkDisplayModeKHR display_mode = mode_props[mode_index].displayMode;
++		VkExtent2D image_size = mode_props[mode_index].parameters.visibleRegion;
++
++		// Find a plane that supports this display, is free or already bound to it, and supports opaque alpha.
++		uint32_t plane = UINT32_MAX;
++		for (uint32_t i = 0; i < plane_count; i++) {
++			if (plane_props[i].currentDisplay != myDisplay && plane_props[i].currentDisplay != VK_NULL_HANDLE)
++				continue;
++
++			uint32_t supported_displays_count = 0;
++			vkGetDisplayPlaneSupportedDisplaysKHR(phys_device, i, &supported_displays_count, nullptr);
++			if (supported_displays_count == 0)
++				continue;
++			std::vector<VkDisplayKHR> supported_displays(supported_displays_count);
++			vkGetDisplayPlaneSupportedDisplaysKHR(phys_device, i, &supported_displays_count, supported_displays.data());
++
++			bool plane_supports_display = false;
++			for (uint32_t j = 0; j < supported_displays_count; j++) {
++				if (supported_displays[j] == myDisplay) {
++					plane_supports_display = true;
++					break;
++				}
++			}
++			if (!plane_supports_display)
++				continue;
++
++			VkDisplayPlaneCapabilitiesKHR plane_caps{};
++			vkGetDisplayPlaneCapabilitiesKHR(phys_device, display_mode, i, &plane_caps);
++			if (plane_caps.supportedAlpha & alpha_mode) {
++				plane = i;
++				break;
++			}
++		}
++		if (plane == UINT32_MAX) {
++			ERROR_LOG(G3D, "DISPLAY Vulkan couldn't find an appropriate plane.");
++			return VK_ERROR_INITIALIZATION_FAILED;
++		}
++
++		INFO_LOG(G3D, "DISPLAY Vulkan: mode %dx%d, plane %d", image_size.width, image_size.height, plane);
++
+ 		display.flags = 0;
++		display.displayMode = display_mode;
++		display.planeIndex = plane;
++		display.planeStackIndex = plane_props[plane].currentStackIndex;
++		display.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
++		display.globalAlpha = 1.0f;
++		display.alphaMode = alpha_mode;
++		display.imageExtent = image_size;
+ 		retval = vkCreateDisplayPlaneSurfaceKHR(instance_, &display, nullptr, &surface_);
+ 		break;
+ 	}
+diff --git a/Common/GPU/Vulkan/VulkanLoader.cpp b/Common/GPU/Vulkan/VulkanLoader.cpp
+index 351668f..71f5356 100644
+--- a/Common/GPU/Vulkan/VulkanLoader.cpp
++++ b/Common/GPU/Vulkan/VulkanLoader.cpp
+@@ -188,6 +188,11 @@ PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
+ #endif
+ #if defined(VK_USE_PLATFORM_DISPLAY_KHR)
+ PFN_vkCreateDisplayPlaneSurfaceKHR vkCreateDisplayPlaneSurfaceKHR;
++PFN_vkGetPhysicalDeviceDisplayPropertiesKHR vkGetPhysicalDeviceDisplayPropertiesKHR;
++PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR vkGetPhysicalDeviceDisplayPlanePropertiesKHR;
++PFN_vkGetDisplayModePropertiesKHR vkGetDisplayModePropertiesKHR;
++PFN_vkGetDisplayPlaneSupportedDisplaysKHR vkGetDisplayPlaneSupportedDisplaysKHR;
++PFN_vkGetDisplayPlaneCapabilitiesKHR vkGetDisplayPlaneCapabilitiesKHR;
+ #endif
+ 
+ PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
+@@ -543,6 +548,11 @@ void VulkanLoadInstanceFunctions(VkInstance instance, const VulkanExtensions &en
+ #endif
+ #if defined(VK_USE_PLATFORM_DISPLAY_KHR)
+ 	LOAD_INSTANCE_FUNC(instance, vkCreateDisplayPlaneSurfaceKHR);
++	LOAD_INSTANCE_FUNC(instance, vkGetPhysicalDeviceDisplayPropertiesKHR);
++	LOAD_INSTANCE_FUNC(instance, vkGetPhysicalDeviceDisplayPlanePropertiesKHR);
++	LOAD_INSTANCE_FUNC(instance, vkGetDisplayModePropertiesKHR);
++	LOAD_INSTANCE_FUNC(instance, vkGetDisplayPlaneSupportedDisplaysKHR);
++	LOAD_INSTANCE_FUNC(instance, vkGetDisplayPlaneCapabilitiesKHR);
+ #endif
+ 
+ 	LOAD_INSTANCE_FUNC(instance, vkDestroySurfaceKHR);
+diff --git a/Common/GPU/Vulkan/VulkanLoader.h b/Common/GPU/Vulkan/VulkanLoader.h
+index c91c896..1eada1b 100644
+--- a/Common/GPU/Vulkan/VulkanLoader.h
++++ b/Common/GPU/Vulkan/VulkanLoader.h
+@@ -187,6 +187,11 @@ extern PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
+ #endif
+ #if defined(VK_USE_PLATFORM_DISPLAY_KHR)
+ extern PFN_vkCreateDisplayPlaneSurfaceKHR vkCreateDisplayPlaneSurfaceKHR;
++extern PFN_vkGetPhysicalDeviceDisplayPropertiesKHR vkGetPhysicalDeviceDisplayPropertiesKHR;
++extern PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR vkGetPhysicalDeviceDisplayPlanePropertiesKHR;
++extern PFN_vkGetDisplayModePropertiesKHR vkGetDisplayModePropertiesKHR;
++extern PFN_vkGetDisplayPlaneSupportedDisplaysKHR vkGetDisplayPlaneSupportedDisplaysKHR;
++extern PFN_vkGetDisplayPlaneCapabilitiesKHR vkGetDisplayPlaneCapabilitiesKHR;
+ #endif
+ 
+ extern PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
+diff --git a/SDL/SDLVulkanGraphicsContext.cpp b/SDL/SDLVulkanGraphicsContext.cpp
+index 433f35b..96192df 100644
+--- a/SDL/SDLVulkanGraphicsContext.cpp
++++ b/SDL/SDLVulkanGraphicsContext.cpp
+@@ -103,6 +103,12 @@ bool SDLVulkanGraphicsContext::Init(SDL_Window *&window, int x, int y, int mode,
+ 		vulkan_->InitSurface(WINDOWSYSTEM_METAL_EXT, makeWindowMetalCompatible(sys_info.info.uikit.window), nullptr);
+ 		break;
+ #endif
++#endif
++#if defined(VK_USE_PLATFORM_DISPLAY_KHR)
++	case SDL_SYSWM_KMSDRM:
++		// The display surface is chosen inside VulkanContext; no window handles needed.
++		vulkan_->InitSurface(WINDOWSYSTEM_DISPLAY, nullptr, nullptr);
++		break;
+ #endif
+ 	default:
+ 		fprintf(stderr, "Vulkan subsystem %d not supported\n", sys_info.subsystem);

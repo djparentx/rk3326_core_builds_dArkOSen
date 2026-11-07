@@ -81,9 +81,13 @@ bitness="$(getconf LONG_BIT)"
 	  mkdir build
 	  cd build
 	  cmake -DUSING_EGL=OFF -DCMAKE_BUILD_TYPE=Release -DUSING_GLES2=ON \
-	  -DUSE_FFMPEG=YES -DUSE_SYSTEM_FFMPEG=NO -DUSING_X11_VULKAN=OFF \
+	  -DUSE_FFMPEG=YES -DUSE_SYSTEM_FFMPEG=NO \
+	  -DVULKAN=ON -DUSE_VULKAN_DISPLAY_KHR=ON -DUSING_X11_VULKAN=OFF -DUSE_WAYLAND_WSI=OFF \
 	  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fpermissive -fPIC" ../.
+	  -DCMAKE_C_COMPILER=/usr/bin/clang \
+	  -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+	  -DCMAKE_C_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -fPIC" \
+	  -DCMAKE_CXX_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -fpermissive -fPIC" ../.
 	  make -j$(nproc)
 
 	  if [[ $? != "0" ]]; then
@@ -99,7 +103,7 @@ bitness="$(getconf LONG_BIT)"
 	  fi
 
 	  cp PPSSPPSDL ../../ppsspp-2021_$bitness/PPSSPPSDL.rk3326
-	  tar -zchvf ../../ppsspp-2021_$bitness/ppssppsdl_2019_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz assets/ PPSSPPSDL
+	  tar -zchvf ../../ppsspp-2021_$bitness/ppssppsdl_2021_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz assets/ PPSSPPSDL
 
 	  echo " "
 	  echo "PPSSPPSDL 2021 executable and ppssppsdl_2021_pkg_$(git rev-parse HEAD | cut -c -7).tar.gz package has been created and has been placed in the rk3326_core_builds/ppsspp-2021_$bitness subfolder"
