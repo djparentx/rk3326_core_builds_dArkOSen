@@ -87,7 +87,7 @@ bitness="$(getconf LONG_BIT)"
 	  -DCMAKE_C_COMPILER=/usr/bin/clang \
 	  -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
 	  -DCMAKE_C_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -fPIC" \
-	  -DCMAKE_CXX_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -fpermissive -fPIC" ../.
+	  -DCMAKE_CXX_FLAGS="-Ofast -D_NDEBUG -march=armv8-a+crc -mtune=cortex-a35 -ftree-vectorize -funsafe-math-optimizations -fpermissive -fPIC -include cstdint" ../.
 	  make -j$(nproc)
 
 	  if [[ $? != "0" ]]; then
