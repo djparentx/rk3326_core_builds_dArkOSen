@@ -30,7 +30,7 @@
 +      drm->native_width  = go2_display_height_get(drm->display);
 +      drm->native_height = go2_display_width_get(drm->display);
 +      drm->presenter     = go2_presenter_create(drm->display,
-+            DRM_FORMAT_RGB565, 0xff000000, true);
++            DRM_FORMAT_XRGB8888, 0xff000000, true);
 +   }
 +   else
 +   {
