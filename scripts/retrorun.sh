@@ -60,10 +60,10 @@ commit="bcdb7afa316fae735b40f06d61072e2f9590ea8c" # Release 3.0.0
 		mkdir -v ../retrorun-$bitness
 	 fi
 
-	 cp retrorun ../retrorun-$bitness/retrorun-rk3326
+	 cp retrorun ../retrorun-$bitness/retrorun
 
 	 if [[ "$bitness" == "32" ]]; then
-		mv ../retrorun-$bitness/retrorun-rk3326 ../retrorun-$bitness/retrorun32-rk3326
+		mv ../retrorun-$bitness/retrorun ../retrorun-$bitness/retrorun32
 	 fi
 
 	 echo " "
