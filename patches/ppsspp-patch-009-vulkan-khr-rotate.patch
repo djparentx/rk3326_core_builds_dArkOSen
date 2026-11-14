@@ -1,0 +1,104 @@
+diff --git a/Common/GPU/Vulkan/VulkanContext.cpp b/Common/GPU/Vulkan/VulkanContext.cpp
+index 9b38473..189ef78 100644
+--- a/Common/GPU/Vulkan/VulkanContext.cpp
++++ b/Common/GPU/Vulkan/VulkanContext.cpp
+@@ -34,6 +34,14 @@ using namespace PPSSPP_VK;
+ 
+ VulkanLogOptions g_LogOptions;
+ 
++#if defined(VK_USE_PLATFORM_DISPLAY_KHR) && !defined(__LIBRETRO__)
++// dArkOSen: VK_KHR_display on portrait panels mounted in landscape housings.
++// SDL reports the display rotated (e.g. 854x480) while the driver only has the
++// native mode (e.g. 480x854). Set in InitSurface(), consumed in InitSwapchain().
++static bool g_khrDisplayRotated = false;
++static VkExtent2D g_khrDisplayExtent = { 0, 0 };
++#endif
++
+ static const char * const validationLayers[] = {
+ 	"VK_LAYER_KHRONOS_validation",
+ 	/*
+@@ -1101,8 +1109,10 @@ VkResult VulkanContext::ReinitSurface() {
+ 		mode_props = new VkDisplayModePropertiesKHR[mode_count];
+ 		vkGetDisplayModePropertiesKHR(phys_device, myDisplay, &mode_count, mode_props);
+ 
+-		// See if there's an appropiate mode available on the display 
++		// See if there's an appropiate mode available on the display
+ 		display_mode = VK_NULL_HANDLE;
++		g_khrDisplayRotated = false;
++		// 1) Exact match with the size SDL gave us.
+ 		for (i = 0; i < mode_count; ++i)
+ 		{
+ 			const VkDisplayModePropertiesKHR* mode = &mode_props[i];
+@@ -1111,10 +1121,41 @@ VkResult VulkanContext::ReinitSurface() {
+ 			    mode->parameters.visibleRegion.height == g_display.pixel_yres)
+ 			{
+ 				display_mode = mode->displayMode;
++				image_size = mode->parameters.visibleRegion;
+ 				mode_found = true;
+ 				break;
+ 			}
+ 		}
++		// 2) dArkOSen: same size with width/height swapped = rotated panel.
++		if (!mode_found) {
++			for (i = 0; i < mode_count; ++i)
++			{
++				const VkDisplayModePropertiesKHR* mode = &mode_props[i];
++
++				if (mode->parameters.visibleRegion.width == g_display.pixel_yres &&
++				    mode->parameters.visibleRegion.height == g_display.pixel_xres)
++				{
++					display_mode = mode->displayMode;
++					image_size = mode->parameters.visibleRegion;
++					g_khrDisplayRotated = true;
++					mode_found = true;
++					break;
++				}
++			}
++		}
++		// 3) dArkOSen: nothing matched (window size is still 320x240 when the ini
++		// has no FullScreen key). Use the panel's first (native) mode. Portrait
++		// native mode = rotated panel, same rule as the SDL2 auto-rotate patch.
++		if (!mode_found) {
++			const VkDisplayModePropertiesKHR* mode = &mode_props[0];
++			display_mode = mode->displayMode;
++			image_size = mode->parameters.visibleRegion;
++			g_khrDisplayRotated = image_size.height > image_size.width;
++			mode_found = true;
++		}
++		g_khrDisplayExtent = image_size;
++		INFO_LOG(Log::G3D, "DISPLAY Vulkan mode %dx%d (requested %dx%d) rotated=%d",
++			image_size.width, image_size.height, g_display.pixel_xres, g_display.pixel_yres, (int)g_khrDisplayRotated);
+ 
+ 		// Free the mode list now.
+ 		delete [] mode_props;
+@@ -1187,8 +1228,7 @@ VkResult VulkanContext::ReinitSurface() {
+ 		}
+ 	
+ 		// Finally, create the vulkan surface.
+-		image_size.width = g_display.pixel_xres;
+-		image_size.height = g_display.pixel_yres;
++		// dArkOSen: image_size was set from the chosen display mode above.
+ 
+ 		display.displayMode = display_mode;
+ 		display.imageExtent = image_size;
+@@ -1472,6 +1512,20 @@ bool VulkanContext::InitSwapchain(VkPresentModeKHR desiredPresentMode) {
+ 		preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+ 	}
+ 
++#if defined(VK_USE_PLATFORM_DISPLAY_KHR) && !defined(__LIBRETRO__)
++	// dArkOSen: rotated panel on VK_KHR_display. The plane itself can't rotate, so
++	// the swapchain stays at the panel's native size with an identity transform and
++	// PPSSPP pre-rotates everything it draws (same path Android pretransform uses).
++	// ROTATE_270 matches HAL_TRANSFORM_ROT_270 in the SDL2 kmsdrm patch. If the
++	// picture is upside down, change both 270s below to 90.
++	if (winsys_ == WINDOWSYSTEM_DISPLAY && g_khrDisplayRotated) {
++		preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
++		g_display.rotation = DisplayRotation::ROTATE_270;
++		g_display.rot_matrix.setRotationZ270();
++		swapChainExtent_ = g_khrDisplayExtent;
++	}
++#endif
++
+ 	// Only log transforms if relevant.
+ 	if (surfCapabilities_.supportedTransforms != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+ 		std::string preTransformStr = surface_transforms_to_string(preTransform);
