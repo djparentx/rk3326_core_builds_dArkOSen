@@ -1,0 +1,26 @@
+diff --git a/src/video/kmsdrm/SDL_kmsdrmvideo.c b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+index 5d8ab38..85ea0c3 100644
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.c
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+@@ -1550,7 +1550,8 @@ void KMSDRM_DestroyWindow(_THIS, SDL_Window *window)
+     SDL_free(window->driverdata);
+     window->driverdata = NULL;
+ 
+-    if (viddata->rotated) {
++    /* dArkOS: Vulkan windows never created the RGA rotate buffers. */
++    if (viddata->rotated && !is_vulkan) {
+         for (i = 0; i < RGA_BUFFERS_MAX; ++i) {
+             close(viddata->rga_buffer_prime_fds[i]);
+         }
+@@ -1698,7 +1699,10 @@ int KMSDRM_CreateWindow(_THIS, SDL_Window *window)
+     SDL_SetMouseFocus(window);
+     SDL_SetKeyboardFocus(window);
+ 
+-    if (viddata->rotated) {
++    /* dArkOS: the RGA rotate buffers come from the GBM device, which is not
++       created for Vulkan windows (see the NON-Vulkan block above). The Vulkan
++       app owns the display plane and has to rotate its own output. */
++    if (viddata->rotated && !is_vulkan) {
+         KMSDRM_InitRotateBuffer(_this, dispdata->mode.hdisplay, dispdata->mode.vdisplay);
+     }
+ 
