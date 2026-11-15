@@ -1,0 +1,143 @@
+diff --git a/core/rend/vulkan/vulkan_context.cpp b/core/rend/vulkan/vulkan_context.cpp
+index 6ba4813..65f20b5 100644
+--- a/core/rend/vulkan/vulkan_context.cpp
++++ b/core/rend/vulkan/vulkan_context.cpp
+@@ -646,2 +646,3 @@ bool VulkanContext::InitDevice()
+ 	    quadRotateDrawer = std::make_unique<QuadDrawer>();
++	    rotDrawer = std::make_unique<QuadDrawer>();
+ 
+@@ -697,2 +698,5 @@ void VulkanContext::CreateSwapChain()
+ 		framebuffers.clear();
++		rotFramebuffer.reset();
++		rotAttachment.reset();
++		rotRenderPass.reset();
+ 		drawFences.clear();
+@@ -747,3 +751,17 @@ void VulkanContext::CreateSwapChain()
+ 			}
+-			SetWindowSize(swapchainExtent.width, swapchainExtent.height);
++			// dArkOSen: a portrait swap chain on KMSDRM is a rotated panel.
++			// Keep the emulator and the UI in landscape and rotate at the end of the frame.
++			swapExtent = swapchainExtent;
++			kmsRotated = false;
++#if defined(USE_SDL) && defined(__linux__) && !defined(__ANDROID__)
++			{
++				const char *videoDriver = SDL_GetCurrentVideoDriver();
++				kmsRotated = videoDriver != nullptr && !strcmp(videoDriver, "KMSDRM")
++						&& swapchainExtent.height > swapchainExtent.width;
++			}
++#endif
++			if (kmsRotated)
++				SetWindowSize(swapchainExtent.height, swapchainExtent.width);
++			else
++				SetWindowSize(swapchainExtent.width, swapchainExtent.height);
+ 			resized = false;
+@@ -872,2 +890,19 @@ void VulkanContext::CreateSwapChain()
+ 
++	    if (kmsRotated)
++	    {
++	    	// dArkOSen: landscape off-screen target, sampled by the final rotate pass in EndFrame()
++	    	vk::AttachmentDescription rotAttachmentDescription = attachmentDescription;
++	    	rotAttachmentDescription.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
++	    	vk::SubpassDependency rotDependency(0, vk::SubpassExternal, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eFragmentShader,
++	    			vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eShaderRead, vk::DependencyFlagBits::eByRegion);
++	    	rotRenderPass = device->createRenderPassUnique(vk::RenderPassCreateInfo(vk::RenderPassCreateFlags(),
++	    			rotAttachmentDescription, subpass, rotDependency));
++	    	rotAttachment = std::make_unique<FramebufferAttachment>(physicalDevice, *device);
++	    	rotAttachment->Init(width, height, presentFormat, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, "rotate");
++	    	vk::ImageView rotView = rotAttachment->GetImageView();
++	    	rotFramebuffer = device->createFramebufferUnique(vk::FramebufferCreateInfo(vk::FramebufferCreateFlags(), *rotRenderPass,
++	    			rotView, width, height, 1));
++	    	NOTICE_LOG(RENDERER, "Rotated KMSDRM panel: swap chain %d x %d, drawing %d x %d", swapExtent.width, swapExtent.height, width, height);
++	    }
++
+ 	    // Framebuffers, fences, semaphores
+@@ -879,3 +914,3 @@ void VulkanContext::CreateSwapChain()
+ 	    	framebuffers.push_back(device->createFramebufferUnique(vk::FramebufferCreateInfo(vk::FramebufferCreateFlags(), *renderPass,
+-	    			view.get(), width, height, 1)));
++	    			view.get(), swapExtent.width, swapExtent.height, 1)));
+ 	    	drawFences.push_back(device->createFenceUnique(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled)));
+@@ -896,2 +931,3 @@ void VulkanContext::CreateSwapChain()
+ 	    quadRotateDrawer->Init(quadRotatePipeline.get());
++	    rotDrawer->Init(quadPipeline.get());
+ 	    overlay->Init(quadPipelineWithAlpha.get());
+@@ -1016,4 +1052,8 @@ void VulkanContext::BeginRenderPass()
+ 	vk::CommandBuffer commandBuffer = *commandBuffers[currentImage];
+-	commandBuffer.beginRenderPass(vk::RenderPassBeginInfo(*renderPass, *framebuffers[currentImage], vk::Rect2D({0, 0}, {width, height}), clear_colors),
+-			vk::SubpassContents::eInline);
++	if (kmsRotated)
++		commandBuffer.beginRenderPass(vk::RenderPassBeginInfo(*rotRenderPass, *rotFramebuffer, vk::Rect2D({0, 0}, {width, height}), clear_colors),
++				vk::SubpassContents::eInline);
++	else
++		commandBuffer.beginRenderPass(vk::RenderPassBeginInfo(*renderPass, *framebuffers[currentImage], vk::Rect2D({0, 0}, {width, height}), clear_colors),
++				vk::SubpassContents::eInline);
+ }
+@@ -1026,2 +1066,23 @@ void VulkanContext::EndFrame(vk::CommandBuffer overlayCmdBuffer)
+ 	commandBuffer.endRenderPass();
++	if (kmsRotated)
++	{
++		// dArkOSen: copy the landscape image to the portrait swap chain image, rotated
++		// the same way as HAL_TRANSFORM_ROT_270 in the SDL2 kmsdrm patch (landscape
++		// top edge -> panel left edge). If the picture is upside down, swap the u
++		// values (1 <-> 0) and the v values (0 <-> 1) below.
++		QuadVertex vtx[4] {
++			{ -1, -1, 0, 1, 0 },
++			{  1, -1, 0, 1, 1 },
++			{ -1,  1, 0, 0, 0 },
++			{  1,  1, 0, 0, 1 },
++		};
++		const std::array<vk::ClearValue, 1> rotClear = { vk::ClearColorValue(std::array<float, 4>{ 0.f, 0.f, 0.f, 1.f }) };
++		commandBuffer.beginRenderPass(vk::RenderPassBeginInfo(*renderPass, *framebuffers[currentImage], vk::Rect2D({0, 0}, swapExtent), rotClear),
++				vk::SubpassContents::eInline);
++		quadPipeline->BindPipeline(commandBuffer);
++		commandBuffer.setViewport(0, vk::Viewport(0, 0, swapExtent.width, swapExtent.height));
++		commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapExtent));
++		rotDrawer->Draw(commandBuffer, rotAttachment->GetImageView(), vtx, true);
++		commandBuffer.endRenderPass();
++	}
+ 	commandBuffer.end();
+@@ -1252,2 +1313,6 @@ void VulkanContext::term()
+ 	framebuffers.clear();
++	rotFramebuffer.reset();
++	rotAttachment.reset();
++	rotRenderPass.reset();
++	rotDrawer.reset();
+ 	renderPass.reset();
+@@ -1412,2 +1477,4 @@ bool VulkanContext::HasSurfaceDimensionChanged() const
+ 			physicalDevice.getSurfaceCapabilitiesKHR(GetSurface());
++	// dArkOSen: width/height are swapped on a rotated panel, compare the real swap chain size
++	const vk::Extent2D current = (width != 0 && height != 0) ? swapExtent : vk::Extent2D(width, height);
+ 	vk::Extent2D swapchainExtent;
+@@ -1417,6 +1484,6 @@ bool VulkanContext::HasSurfaceDimensionChanged() const
+ 		swapchainExtent.width = std::min(
+-				std::max(width, surfaceCapabilities.minImageExtent.width),
++				std::max(current.width, surfaceCapabilities.minImageExtent.width),
+ 				surfaceCapabilities.maxImageExtent.width);
+ 		swapchainExtent.height = std::min(
+-				std::max(height, surfaceCapabilities.minImageExtent.height),
++				std::max(current.height, surfaceCapabilities.minImageExtent.height),
+ 				surfaceCapabilities.maxImageExtent.height);
+@@ -1428,3 +1495,3 @@ bool VulkanContext::HasSurfaceDimensionChanged() const
+ 	}
+-	return width != swapchainExtent.width || height != swapchainExtent.height;
++	return current.width != swapchainExtent.width || current.height != swapchainExtent.height;
+ }
+diff --git a/core/rend/vulkan/vulkan_context.h b/core/rend/vulkan/vulkan_context.h
+index f2d8293..0a92557 100644
+--- a/core/rend/vulkan/vulkan_context.h
++++ b/core/rend/vulkan/vulkan_context.h
+@@ -95,2 +95,3 @@ public:
+ struct ImDrawData;
++class FramebufferAttachment;
+ 
+@@ -262,2 +263,11 @@ private:
+ 
++	// dArkOSen: portrait panel mounted in a landscape housing (KMSDRM).
++	// width/height stay landscape; swapExtent is the real (portrait) swap chain size.
++	bool kmsRotated = false;
++	vk::Extent2D swapExtent;
++	vk::UniqueRenderPass rotRenderPass;
++	std::unique_ptr<FramebufferAttachment> rotAttachment;
++	vk::UniqueFramebuffer rotFramebuffer;
++	std::unique_ptr<QuadDrawer> rotDrawer;
++
+ 	std::vector<vk::UniqueFence> drawFences;
