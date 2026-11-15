@@ -1,15 +1,15 @@
 diff --git a/src/util/vulkan_swap_chain.cpp b/src/util/vulkan_swap_chain.cpp
-index eba225d..5ba4071 100644
+index eba225d..b06e70b 100644
 --- a/src/util/vulkan_swap_chain.cpp
 +++ b/src/util/vulkan_swap_chain.cpp
 @@ -452,6 +452,22 @@ bool VulkanSwapChain::CreateSwapChain(VulkanDevice& dev, Error* error)
      break;
    }
 
-+  // dArkOSen: rotated panel on VK_KHR_display (SDL2 KMSDRM). The window is landscape (e.g. 854x480) but the
++  // dArkOSen: rotated panel on VK_KHR_display (SDL3 KMSDRM). The window is landscape (e.g. 854x480) but the
 +  // display surface only exists at the panel's native portrait size (e.g. 480x854), and the plane can't rotate.
 +  // Keep the swap chain at the native size with an identity transform, and prerotate everything we draw.
-+  // Rotate270Clockwise matches HAL_TRANSFORM_ROT_270 in the SDL2 kmsdrm patch.
++  // Rotate270Clockwise matches HAL_TRANSFORM_ROT_270 in sdl3-patch-0001-kmsdrm-rga-rotate.patch.
 +  if (const VkExtent2D native_size = surface_caps.surfaceCapabilities.currentExtent;
 +      m_window_info.type == WindowInfoType::SDL && window_prerotation == WindowInfoPrerotation::Identity &&
 +      native_size.width != UINT32_MAX && native_size.width != native_size.height &&
