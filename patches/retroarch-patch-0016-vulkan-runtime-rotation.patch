@@ -1,0 +1,582 @@
+diff --git a/gfx/common/vulkan_common.h b/gfx/common/vulkan_common.h
+--- a/gfx/common/vulkan_common.h
++++ b/gfx/common/vulkan_common.h
+@@ -289,8 +289,19 @@ enum vulkan_context_flags
+    VK_CTX_FLAG_HAS_ACQUIRED_SWAPCHAIN       = (1 << 4),
+    /* Whether HDR colorspaces are supported by the instance */
+    VK_CTX_FLAG_HDR_SUPPORT                  = (1 << 5),
++   /* Panel is portrait; draw landscape and rotate at draw time. */
++   VK_CTX_FLAG_ROTATED                      = (1 << 6)
+ };
+ 
++/* Landscape size seen by the frontend (swapped when rotated). */
++#define VK_CTX_LANDSCAPE_WIDTH(ctx)  (((ctx)->flags & VK_CTX_FLAG_ROTATED) \
++      ? (ctx)->swapchain_height : (ctx)->swapchain_width)
++#define VK_CTX_LANDSCAPE_HEIGHT(ctx) (((ctx)->flags & VK_CTX_FLAG_ROTATED) \
++      ? (ctx)->swapchain_width : (ctx)->swapchain_height)
++/* Landscape width when rotated, 0 otherwise. */
++#define VK_CTX_ROT_WIDTH(ctx)        (((ctx)->flags & VK_CTX_FLAG_ROTATED) \
++      ? (ctx)->swapchain_height : 0)
++
+ enum vulkan_emulated_mailbox_flags
+ {
+    VK_MAILBOX_FLAG_ACQUIRED            = (1 << 0),
+diff --git a/gfx/drivers/vulkan.c b/gfx/drivers/vulkan.c
+--- a/gfx/drivers/vulkan.c
++++ b/gfx/drivers/vulkan.c
+@@ -474,7 +474,16 @@ static void vulkan_draw_triangles(vk_t *vk, const struct vk_draw_triangles *call
+          sci.extent.height = vk->vp.height;
+       }
+ 
+-      vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
++      if (vk->context->flags & VK_CTX_FLAG_ROTATED)
++      {
++         VkViewport rvp = vulkan_rotate_viewport(vk->vk_vp,
++               vk->context->swapchain_height);
++         sci            = vulkan_rotate_scissor(sci,
++               vk->context->swapchain_height);
++         vkCmdSetViewport(vk->cmd, 0, 1, &rvp);
++      }
++      else
++         vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
+       vkCmdSetScissor (vk->cmd, 0, 1, &sci);
+ 
+       vk->tracker.dirty &= ~VULKAN_DIRTY_DYNAMIC_BIT;
+@@ -493,7 +502,16 @@ static void vulkan_draw_triangles(vk_t *vk, const struct vk_draw_triangles *call
+          sci.extent.height = vk->vp.height;
+       }
+ 
+-      vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
++      if (vk->context->flags & VK_CTX_FLAG_ROTATED)
++      {
++         VkViewport rvp = vulkan_rotate_viewport(vk->vk_vp,
++               vk->context->swapchain_height);
++         sci            = vulkan_rotate_scissor(sci,
++               vk->context->swapchain_height);
++         vkCmdSetViewport(vk->cmd, 0, 1, &rvp);
++      }
++      else
++         vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
+       vkCmdSetScissor (vk->cmd, 0, 1, &sci);
+ 
+       vk->tracker.dirty &= ~VULKAN_DIRTY_DYNAMIC_BIT;
+@@ -1314,6 +1332,7 @@ static void gfx_display_vk_draw_pipeline(
+    static float t                   = 0.0f;
+    float output_size[2];
+    float yflip                      = 1.0f;
++   float rotated                    = 0.0f;
+    video_coord_array_t *ca          = NULL;
+    vk_t *vk                         = (vk_t*)data;
+ 
+@@ -1324,8 +1343,9 @@ static void gfx_display_vk_draw_pipeline(
+    draw->y                          = 0;
+    draw->matrix_data                = NULL;
+ 
+-   output_size[0]                   = (float)vk->context->swapchain_width;
+-   output_size[1]                   = (float)vk->context->swapchain_height;
++   output_size[0]                   = (float)VK_CTX_LANDSCAPE_WIDTH(vk->context);
++   output_size[1]                   = (float)VK_CTX_LANDSCAPE_HEIGHT(vk->context);
++   rotated                          = (vk->context->flags & VK_CTX_FLAG_ROTATED) ? 1.0f : 0.0f;
+ 
+    switch (draw->pipeline_id)
+    {
+@@ -1336,11 +1356,12 @@ static void gfx_display_vk_draw_pipeline(
+          ca                               = &p_disp->dispca;
+          draw->coords                     = (struct video_coords*)&ca->coords;
+          draw->backend_data               = ubo_scratch_data;
+-         draw->backend_data_size          = 2 * sizeof(float);
++         draw->backend_data_size          = 3 * sizeof(float);
+ 
+          /* Match UBO layout in shader. */
+          memcpy(ubo_scratch_data, &t, sizeof(t));
+          memcpy(ubo_scratch_data + sizeof(float), &yflip, sizeof(yflip));
++         memcpy(ubo_scratch_data + 2 * sizeof(float), &rotated, sizeof(rotated));
+          break;
+ 
+       /* Snow simple */
+@@ -1349,7 +1370,7 @@ static void gfx_display_vk_draw_pipeline(
+       case VIDEO_SHADER_MENU_5:
+          draw->backend_data               = ubo_scratch_data;
+          draw->backend_data_size          = sizeof(math_matrix_4x4)
+-            + 4 * sizeof(float);
++            + 5 * sizeof(float);
+ 
+          /* Match UBO layout in shader. */
+          memcpy(ubo_scratch_data,
+@@ -1367,6 +1388,8 @@ static void gfx_display_vk_draw_pipeline(
+                + 2 * sizeof(float), &t, sizeof(t));
+          memcpy(ubo_scratch_data + sizeof(math_matrix_4x4)
+                + 3 * sizeof(float), &yflip, sizeof(yflip));
++         memcpy(ubo_scratch_data + sizeof(math_matrix_4x4)
++               + 4 * sizeof(float), &rotated, sizeof(rotated));
+          draw->coords          = &blank_coords;
+          blank_coords.vertices = 4;
+          draw->prim_type       = GFX_DISPLAY_PRIM_TRIANGLESTRIP;
+@@ -1409,7 +1432,7 @@ static void gfx_display_vk_draw(gfx_display_ctx_draw_t *draw,
+       color                       = &vk_colors[0];
+ 
+    vk->vk_vp.x                    = draw->x;
+-   vk->vk_vp.y                    = vk->context->swapchain_height - draw->y - draw->height;
++   vk->vk_vp.y                    = VK_CTX_LANDSCAPE_HEIGHT(vk->context) - draw->y - draw->height;
+    vk->vk_vp.width                = draw->width;
+    vk->vk_vp.height               = draw->height;
+    vk->vk_vp.minDepth             = 0.0f;
+@@ -3065,6 +3088,7 @@ static bool vulkan_init_default_filter_chain(vk_t *vk)
+    info.swapchain.format      = vk->context->swapchain_format;
+    info.swapchain.render_pass = vk->render_pass;
+    info.swapchain.num_indices = vk->context->num_swapchain_images;
++   info.swapchain.rot_width   = VK_CTX_ROT_WIDTH(vk->context);
+ 
+    vk->filter_chain_default   = vulkan_filter_chain_create_default(
+          &info,
+@@ -3140,6 +3164,7 @@ static bool vulkan_init_filter_chain_preset(vk_t *vk, const char *shader_path)
+    info.swapchain.format      = vk->context->swapchain_format;
+    info.swapchain.render_pass = vk->render_pass;
+    info.swapchain.num_indices = vk->context->num_swapchain_images;
++   info.swapchain.rot_width   = VK_CTX_ROT_WIDTH(vk->context);
+ 
+    vk->filter_chain           = vulkan_filter_chain_create_from_preset(
+          &info, shader_path,
+@@ -3873,6 +3898,7 @@ static void vulkan_check_swapchain(vk_t *vk)
+    filter_info.format               = vk->context->swapchain_format;
+    filter_info.render_pass          = vk->render_pass;
+    filter_info.num_indices          = vk->context->num_swapchain_images;
++   filter_info.rot_width            = VK_CTX_ROT_WIDTH(vk->context);
+    if (
+        !vulkan_filter_chain_update_swapchain_info(
+           (vk->filter_chain) ? vk->filter_chain : vk->filter_chain_default,
+@@ -4025,6 +4051,24 @@ static void vulkan_set_projection(vk_t *vk,
+ 
+    /* Required for translate_x+y / negative offsets to also work in RGUI */
+    matrix_4x4_multiply(vk->mvp_menu, trn, vk->mvp_no_rot);
++
++   /* Runtime rotation: rotate clip space (x, y) -> (y, -x),
++    * same direction as Video Rotation 90. */
++   if (vk->context && (vk->context->flags & VK_CTX_FLAG_ROTATED))
++   {
++      math_matrix_4x4 scr = {
++         {  0.0f,    -1.0f,    0.0f,    0.0f ,
++            1.0f,     0.0f,    0.0f,    0.0f ,
++            0.0f,     0.0f,    1.0f,    0.0f ,
++            0.0f,     0.0f,    0.0f,    1.0f }
++      };
++      tmp = vk->mvp;
++      matrix_4x4_multiply(vk->mvp, scr, tmp);
++      tmp = vk->mvp_no_rot;
++      matrix_4x4_multiply(vk->mvp_no_rot, scr, tmp);
++      tmp = vk->mvp_menu;
++      matrix_4x4_multiply(vk->mvp_menu, scr, tmp);
++   }
+ }
+ 
+ static void vulkan_set_rotation(void *data, unsigned rotation)
+@@ -4151,10 +4195,29 @@ static void vulkan_readback(vk_t *vk, struct vk_image *readback_image)
+    region.imageExtent.height              = vp.height + vk->translate_y;
+    region.imageExtent.depth               = 1;
+ 
++   /* Runtime rotation: read the matching portrait rect. */
++   if (vk->context->flags & VK_CTX_FLAG_ROTATED)
++   {
++      VkRect2D r;
++      r.offset.x                          = region.imageOffset.x;
++      r.offset.y                          = region.imageOffset.y;
++      r.extent.width                      = region.imageExtent.width;
++      r.extent.height                     = region.imageExtent.height;
++      r                                   = vulkan_rotate_scissor(r,
++            vk->context->swapchain_height);
++      region.imageOffset.x                = r.offset.x;
++      region.imageOffset.y                = r.offset.y;
++      region.imageExtent.width            = r.extent.width;
++      region.imageExtent.height           = r.extent.height;
++   }
++
+    staging  = &vk->readback.staging[vk->context->current_frame_index];
+    *staging = vulkan_create_texture(vk,
+          staging->memory != VK_NULL_HANDLE ? staging : NULL,
+-         vk->vp.width, vk->vp.height,
++         (vk->context->flags & VK_CTX_FLAG_ROTATED)
++         ? vk->vp.height : vk->vp.width,
++         (vk->context->flags & VK_CTX_FLAG_ROTATED)
++         ? vk->vp.width  : vk->vp.height,
+          VK_FORMAT_B8G8R8A8_UNORM, /* Formats don't matter for readback since it's a raw copy. */
+          NULL, NULL, VULKAN_TEXTURE_READBACK);
+ 
+@@ -4282,7 +4345,16 @@ static void vulkan_draw_quad(vk_t *vk, const struct vk_draw_quad *quad)
+          sci.extent.height = vk->vp.height;
+       }
+ 
+-      vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
++      if (vk->context->flags & VK_CTX_FLAG_ROTATED)
++      {
++         VkViewport rvp = vulkan_rotate_viewport(vk->vk_vp,
++               vk->context->swapchain_height);
++         sci            = vulkan_rotate_scissor(sci,
++               vk->context->swapchain_height);
++         vkCmdSetViewport(vk->cmd, 0, 1, &rvp);
++      }
++      else
++         vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
+       vkCmdSetScissor (vk->cmd, 0, 1, &sci);
+ 
+       vk->tracker.dirty &= ~VULKAN_DIRTY_DYNAMIC_BIT;
+@@ -4301,7 +4373,16 @@ static void vulkan_draw_quad(vk_t *vk, const struct vk_draw_quad *quad)
+          sci.extent.height = vk->vp.height;
+       }
+ 
+-      vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
++      if (vk->context->flags & VK_CTX_FLAG_ROTATED)
++      {
++         VkViewport rvp = vulkan_rotate_viewport(vk->vk_vp,
++               vk->context->swapchain_height);
++         sci            = vulkan_rotate_scissor(sci,
++               vk->context->swapchain_height);
++         vkCmdSetViewport(vk->cmd, 0, 1, &rvp);
++      }
++      else
++         vkCmdSetViewport(vk->cmd, 0, 1, &vk->vk_vp);
+       vkCmdSetScissor (vk->cmd, 0, 1, &sci);
+ 
+       vk->tracker.dirty &= ~VULKAN_DIRTY_DYNAMIC_BIT;
+@@ -5802,6 +5883,38 @@ static void vulkan_viewport_info(void *data, struct video_viewport *vp)
+    vp->full_height = height;
+ }
+ 
++/* Runtime rotation: staging holds the portrait rect (vp_h wide,
++ * vp_w tall). Rotate back to landscape BGR24, bottom-up. */
++static void vulkan_read_viewport_rotated(const uint8_t *src,
++      unsigned stride, VkFormat format, uint8_t *buffer,
++      unsigned vp_width, unsigned vp_height)
++{
++   int x, y;
++   bool rgba = (format == VK_FORMAT_R8G8B8A8_UNORM)
++            || (format == VK_FORMAT_A8B8G8R8_UNORM_PACK32);
++
++   buffer += 3 * (vp_height - 1) * vp_width;
++   for (y = 0; y < (int)vp_height; y++, buffer -= 3 * vp_width)
++   {
++      for (x = 0; x < (int)vp_width; x++)
++      {
++         const uint8_t *p = src + (vp_width - 1 - x) * stride + 4 * y;
++         if (rgba)
++         {
++            buffer[3 * x + 2] = p[0];
++            buffer[3 * x + 1] = p[1];
++            buffer[3 * x + 0] = p[2];
++         }
++         else
++         {
++            buffer[3 * x + 0] = p[0];
++            buffer[3 * x + 1] = p[1];
++            buffer[3 * x + 2] = p[2];
++         }
++      }
++   }
++}
++
+ static bool vulkan_read_viewport(void *data, uint8_t *buffer, bool is_idle)
+ {
+    struct vk_texture *staging       = NULL;
+@@ -5841,7 +5954,24 @@ static bool vulkan_read_viewport(void *data, uint8_t *buffer, bool is_idle)
+             break;
+       }
+ 
+-      if (ctx)
++      if (ctx && (vk->context->flags & VK_CTX_FLAG_ROTATED))
++      {
++         if (staging->memory == VK_NULL_HANDLE)
++            return false;
++
++         vkMapMemory(vk->context->device, staging->memory,
++               staging->offset, staging->size, 0, (void**)&src);
++
++         if (     (staging->flags & VK_TEX_FLAG_NEED_MANUAL_CACHE_MANAGEMENT)
++               && (staging->memory != VK_NULL_HANDLE))
++            VULKAN_SYNC_TEXTURE_TO_CPU(vk->context->device, staging->memory);
++
++         vulkan_read_viewport_rotated(src, (unsigned)staging->stride,
++               format, buffer, vk->vp.width, vk->vp.height);
++
++         vkUnmapMemory(vk->context->device, staging->memory);
++      }
++      else if (ctx)
+       {
+          if (staging->memory == VK_NULL_HANDLE)
+             return false;
+@@ -5903,6 +6033,25 @@ static bool vulkan_read_viewport(void *data, uint8_t *buffer, bool is_idle)
+          unsigned vp_height = (vk->vp.height > vk->video_height) ? vk->video_height : vk->vp.height;
+          const uint8_t *src = (const uint8_t*)staging->mapped;
+ 
++         if (vk->context->flags & VK_CTX_FLAG_ROTATED)
++         {
++            switch (format)
++            {
++               case VK_FORMAT_B8G8R8A8_UNORM:
++               case VK_FORMAT_R8G8B8A8_UNORM:
++               case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
++                  vulkan_read_viewport_rotated(src,
++                        (unsigned)staging->stride, format, buffer,
++                        vk->vp.width, vk->vp.height);
++                  break;
++               default:
++                  RARCH_ERR("[Vulkan] Unexpected swapchain format.\n");
++                  break;
++            }
++            vulkan_destroy_texture(vk->context->device, staging);
++            return true;
++         }
++
+          buffer            += 3 * (vp_height - 1) * vp_width;
+ 
+          switch (format)
+diff --git a/gfx/drivers/vulkan_shaders/pipeline_bokeh.frag b/gfx/drivers/vulkan_shaders/pipeline_bokeh.frag
+--- a/gfx/drivers/vulkan_shaders/pipeline_bokeh.frag
++++ b/gfx/drivers/vulkan_shaders/pipeline_bokeh.frag
+@@ -7,6 +7,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
+    vec2 OutputSize;
+    float time;
+    float yflip;
++   float rotated;
+ } constants;
+ 
+ layout(location = 0) out vec4 FragColor;
+@@ -15,7 +16,7 @@ void main(void)
+ {
+ 
+       float speed = constants.time * 4.0;
+-      vec2 uv = -1.0 + 2.0 * gl_FragCoord.xy / constants.OutputSize;
++      vec2 uv = -1.0 + 2.0 * (constants.rotated > 0.5 ? vec2(constants.OutputSize.x - gl_FragCoord.y, gl_FragCoord.x) : gl_FragCoord.xy) / constants.OutputSize;
+ 	  uv.y *= constants.yflip;
+       uv.x *= constants.OutputSize.x / constants.OutputSize.y;
+     vec3 color = vec3(0.0);
+diff --git a/gfx/drivers/vulkan_shaders/pipeline_ribbon.vert b/gfx/drivers/vulkan_shaders/pipeline_ribbon.vert
+--- a/gfx/drivers/vulkan_shaders/pipeline_ribbon.vert
++++ b/gfx/drivers/vulkan_shaders/pipeline_ribbon.vert
+@@ -7,6 +7,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
+ {
+    float time;
+    float yflip;
++   float rotated;
+ } constants;
+ 
+ float iqhash(float n)
+@@ -51,4 +52,6 @@ void main()
+    vEC = v;
+    gl_Position = vec4(v, 1.0);
+    gl_Position.y *= constants.yflip;
++   if (constants.rotated > 0.5)
++      gl_Position.xy = vec2(gl_Position.y, -gl_Position.x);
+ }
+diff --git a/gfx/drivers/vulkan_shaders/pipeline_ribbon_simple.vert b/gfx/drivers/vulkan_shaders/pipeline_ribbon_simple.vert
+--- a/gfx/drivers/vulkan_shaders/pipeline_ribbon_simple.vert
++++ b/gfx/drivers/vulkan_shaders/pipeline_ribbon_simple.vert
+@@ -6,6 +6,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
+ {
+    float time;
+    float yflip;
++   float rotated;
+ } constants;
+ 
+ float iqhash(float n)
+@@ -34,4 +35,6 @@ void main()
+    v.y = cos((v.x + v.z / 3.0 + constants.time) * 2.0) / 10.0 + noise(v2.xyz) / 4.0;
+    gl_Position = vec4(v, 1.0);
+    gl_Position.y *= constants.yflip;
++   if (constants.rotated > 0.5)
++      gl_Position.xy = vec2(gl_Position.y, -gl_Position.x);
+ }
+diff --git a/gfx/drivers/vulkan_shaders/pipeline_snow.frag b/gfx/drivers/vulkan_shaders/pipeline_snow.frag
+--- a/gfx/drivers/vulkan_shaders/pipeline_snow.frag
++++ b/gfx/drivers/vulkan_shaders/pipeline_snow.frag
+@@ -7,6 +7,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
+    vec2 OutputSize;
+    float time;
+    float yflip;
++   float rotated;
+ } constants;
+ 
+ layout(location = 0) out vec4 FragColor;
+@@ -56,7 +57,7 @@ float snow(vec2 pos, float time, float scale)
+ void main(void)
+ {
+    float tim = constants.time * 0.4 * speed;
+-   vec2 pos = gl_FragCoord.xy / constants.OutputSize.xx;
++   vec2 pos = (constants.rotated > 0.5 ? vec2(constants.OutputSize.x - gl_FragCoord.y, gl_FragCoord.x) : gl_FragCoord.xy) / constants.OutputSize.xx;
+    pos.y = mix(pos.y, 1.0 - pos.y, constants.yflip); // Flip Y
+    float a = 0.0;
+    // Each of these is a layer of snow
+diff --git a/gfx/drivers/vulkan_shaders/pipeline_snow_simple.frag b/gfx/drivers/vulkan_shaders/pipeline_snow_simple.frag
+--- a/gfx/drivers/vulkan_shaders/pipeline_snow_simple.frag
++++ b/gfx/drivers/vulkan_shaders/pipeline_snow_simple.frag
+@@ -7,6 +7,7 @@ layout(std140, set = 0, binding = 0) uniform UBO
+    vec2 OutputSize;
+    float time;
+    float yflip;
++   float rotated;
+ } constants;
+ 
+ layout(location = 0) out vec4 FragColor;
+@@ -56,7 +57,7 @@ float snow(vec2 pos, float time, float scale)
+ void main(void)
+ {
+    float tim = constants.time * 0.4 * speed;
+-   vec2 pos = gl_FragCoord.xy / constants.OutputSize.xx;
++   vec2 pos = (constants.rotated > 0.5 ? vec2(constants.OutputSize.x - gl_FragCoord.y, gl_FragCoord.x) : gl_FragCoord.xy) / constants.OutputSize.xx;
+    pos.y = mix(pos.y, 1.0 - pos.y, constants.yflip); // Flip Y
+    float a = 0.0;
+    // Each of these is a layer of snow
+diff --git a/gfx/drivers_context/khr_display_ctx.c b/gfx/drivers_context/khr_display_ctx.c
+--- a/gfx/drivers_context/khr_display_ctx.c
++++ b/gfx/drivers_context/khr_display_ctx.c
+@@ -116,7 +116,17 @@ static bool gfx_ctx_khr_display_set_resize(void *data,
+    khr->width                  = width;
+    khr->height                 = height;
+ 
+-   if (!vulkan_create_swapchain(&khr->vk, khr->width, khr->height,
++   /* Frontend works in landscape; swapchain stays portrait. */
++   if (khr->vk.context.flags & VK_CTX_FLAG_ROTATED)
++   {
++      if (!vulkan_create_swapchain(&khr->vk, khr->height, khr->width,
++               khr->swap_interval))
++      {
++         RARCH_ERR("[Vulkan] Failed to update swapchain.\n");
++         return false;
++      }
++   }
++   else if (!vulkan_create_swapchain(&khr->vk, khr->width, khr->height,
+             khr->swap_interval))
+    {
+       RARCH_ERR("[Vulkan] Failed to update swapchain.\n");
+@@ -160,8 +170,20 @@ static bool gfx_ctx_khr_display_set_video_mode(void *data,
+       return false;
+    }
+ 
+-   khr->width                     = khr->vk.context.swapchain_width;
+-   khr->height                    = khr->vk.context.swapchain_height;
++   /* Runtime rotation: portrait panel -> report landscape size,
++    * the Vulkan driver rotates every draw. */
++   if (khr->vk.context.swapchain_height > khr->vk.context.swapchain_width)
++   {
++      khr->vk.context.flags      |= VK_CTX_FLAG_ROTATED;
++      RARCH_LOG("[Vulkan] Portrait panel %ux%u, rotating output.\n",
++            khr->vk.context.swapchain_width,
++            khr->vk.context.swapchain_height);
++   }
++   else
++      khr->vk.context.flags      &= ~VK_CTX_FLAG_ROTATED;
++
++   khr->width                     = VK_CTX_LANDSCAPE_WIDTH(&khr->vk.context);
++   khr->height                    = VK_CTX_LANDSCAPE_HEIGHT(&khr->vk.context);
+    khr->refresh_rate_x1000        = info.refresh_rate_x1000;
+ 
+    return true;
+diff --git a/gfx/drivers_shader/shader_vulkan.cpp b/gfx/drivers_shader/shader_vulkan.cpp
+--- a/gfx/drivers_shader/shader_vulkan.cpp
++++ b/gfx/drivers_shader/shader_vulkan.cpp
+@@ -307,6 +307,7 @@ class Pass
+ 
+       Size2D current_framebuffer_size;
+       VkViewport curr_vp;
++      unsigned rot_width = 0;
+       vulkan_filter_chain_pass_info pass_info;
+ 
+       std::vector<uint32_t> vertex_shader;
+@@ -1684,6 +1685,7 @@ Size2D Pass::set_pass_info(
+    clear_vk();
+ 
+    curr_vp                  = swapchain.vp;
++   rot_width                = swapchain.rot_width;
+    pass_info                = info;
+ 
+    num_sync_indices         = swapchain.num_indices;
+@@ -2546,7 +2548,13 @@ void Pass::build_commands(
+ 
+    if (final_pass)
+    {
+-      vkCmdSetViewport(cmd, 0, 1, &curr_vp);
++      if (rot_width)
++      {
++         const VkViewport rvp = vulkan_rotate_viewport(curr_vp, rot_width);
++         vkCmdSetViewport(cmd, 0, 1, &rvp);
++      }
++      else
++         vkCmdSetViewport(cmd, 0, 1, &curr_vp);
+ 
+ #ifdef VULKAN_ROLLING_SCANLINE_SIMULATION
+       if (simulate_scanline)
+@@ -2562,7 +2570,9 @@ void Pass::build_commands(
+                uint32_t(curr_vp.height / float(total_subframes))
+             },
+          };
+-         vkCmdSetScissor(cmd, 0, 1, &sci);
++         const VkRect2D rsci = rot_width
++            ? vulkan_rotate_scissor(sci, rot_width) : sci;
++         vkCmdSetScissor(cmd, 0, 1, &rsci);
+       }
+       else
+ #endif /* VULKAN_ROLLING_SCANLINE_SIMULATION */
+@@ -2577,7 +2587,9 @@ void Pass::build_commands(
+                uint32_t(curr_vp.height)
+             },
+          };
+-         vkCmdSetScissor(cmd, 0, 1, &sci);
++         const VkRect2D rsci = rot_width
++            ? vulkan_rotate_scissor(sci, rot_width) : sci;
++         vkCmdSetScissor(cmd, 0, 1, &rsci);
+       }
+    }
+    else
+diff --git a/gfx/drivers_shader/shader_vulkan.h b/gfx/drivers_shader/shader_vulkan.h
+--- a/gfx/drivers_shader/shader_vulkan.h
++++ b/gfx/drivers_shader/shader_vulkan.h
+@@ -22,6 +22,7 @@
+ 
+ #include <boolean.h>
+ #include <retro_common_api.h>
++#include <retro_inline.h>
+ 
+ #include "glslang_util.h"
+ 
+@@ -70,8 +71,43 @@ struct vulkan_filter_chain_swapchain_info
+    VkFormat format;
+    VkRenderPass render_pass;
+    unsigned num_indices;
++   /* Landscape width when the panel is rotated, 0 otherwise. */
++   unsigned rot_width;
+ };
+ 
++/* Runtime rotation: map a landscape rect to the portrait swapchain.
++ * Matches the clip-space rotation (x, y) -> (y, -x).
++ * rot_width is the landscape width (= portrait swapchain height). */
++static INLINE VkViewport vulkan_rotate_viewport(VkViewport vp,
++      unsigned rot_width)
++{
++   VkViewport out = vp;
++   out.x          = vp.y;
++   out.y          = (float)rot_width - vp.x - vp.width;
++   out.width      = vp.height;
++   out.height     = vp.width;
++   return out;
++}
++
++static INLINE VkRect2D vulkan_rotate_scissor(VkRect2D sci,
++      unsigned rot_width)
++{
++   VkRect2D out;
++   int32_t  y         = (int32_t)rot_width - sci.offset.x
++      - (int32_t)sci.extent.width;
++   uint32_t h         = sci.extent.width;
++   if (y < 0)
++   {
++      h               = ((uint32_t)(-y) < h) ? h - (uint32_t)(-y) : 0;
++      y               = 0;
++   }
++   out.offset.x       = sci.offset.y;
++   out.offset.y       = y;
++   out.extent.width   = sci.extent.height;
++   out.extent.height  = h;
++   return out;
++}
++
+ struct vulkan_filter_chain_create_info
+ {
+    VkDevice device;

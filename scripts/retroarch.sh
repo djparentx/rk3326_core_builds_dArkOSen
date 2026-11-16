@@ -48,6 +48,21 @@ tag="v1.22.2"
 		   rm "$patching" 
 	  done
 	 fi
+
+	 # Rebuild menu background shaders changed by retroarch-patch-0016
+	 if command -v glslc > /dev/null; then
+	  for shader in pipeline_ribbon.vert pipeline_ribbon_simple.vert pipeline_snow.frag pipeline_snow_simple.frag pipeline_bokeh.frag
+	  do
+		   glslc -mfmt=c -o gfx/drivers/vulkan_shaders/$shader.inc gfx/drivers/vulkan_shaders/$shader
+		   if [[ $? != "0" ]]; then
+			echo " "
+			echo "There was an error while compiling $shader.  Stopping here."
+			exit 1
+		   fi
+	  done
+	 else
+	  echo "glslc not found, menu background shaders not rebuilt."
+	 fi
 	 
 	  if [[ "$bitness" == "64" ]]; then
 	    CFLAGS="-Ofast -march=armv8-a -mtune=cortex-a35 -fomit-frame-pointer -DNDEBUG" ./configure --disable-caca \
