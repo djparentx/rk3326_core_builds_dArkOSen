@@ -1,0 +1,256 @@
+diff --git a/Core/Config.cpp b/Core/Config.cpp
+index 230c2a3..d6e8922 100644
+--- a/Core/Config.cpp
++++ b/Core/Config.cpp
+@@ -730,6 +730,7 @@ static const ConfigSetting graphicsSettings[] = {
+ 	ConfigSetting("HighQualityDepth", SETTING(g_Config, bHighQualityDepth), true, CfgFlag::PER_GAME | CfgFlag::REPORT),
+ 	ConfigSetting("FrameSkip", SETTING(g_Config, iFrameSkip), 0, CfgFlag::PER_GAME | CfgFlag::REPORT),
+ 	ConfigSetting("AutoFrameSkip", SETTING(g_Config, bAutoFrameSkip), IsVREnabled(), CfgFlag::PER_GAME | CfgFlag::REPORT),
++	ConfigSetting("Force30FPS", SETTING(g_Config, bForce30FPS), false, CfgFlag::PER_GAME),
+ 	ConfigSetting("StereoRendering", SETTING(g_Config, bStereoRendering), false, CfgFlag::PER_GAME),
+ 	ConfigSetting("StereoToMonoShader", SETTING(g_Config, sStereoToMonoShader), "RedBlue", CfgFlag::PER_GAME),
+ 	ConfigSetting("FrameRate", SETTING(g_Config, iFpsLimit1), 0, CfgFlag::PER_GAME),
+diff --git a/Core/Config.h b/Core/Config.h
+index 87f9f4d..fa3cb44 100644
+--- a/Core/Config.h
++++ b/Core/Config.h
+@@ -309,6 +309,7 @@ struct Config : public ConfigBlock {
+ 
+ 	int iFrameSkip;
+ 	bool bAutoFrameSkip;
++	bool bForce30FPS;
+ 
+ 	int iWindowX;
+ 	int iWindowY;
+diff --git a/Core/CwCheat.cpp b/Core/CwCheat.cpp
+index 597ea5d..585b66a 100644
+--- a/Core/CwCheat.cpp
++++ b/Core/CwCheat.cpp
+@@ -66,7 +66,7 @@ CheatFileParser::~CheatFileParser() {
+ 
+ bool CheatFileParser::Parse() {
+ 	// Ugh, using a member variable as loop counter is bad.
+-	for (int lineNumber = 1; fp_ && !feof(fp_); ++lineNumber) {
++	for (int lineNumber = 1; fp_ && !done_ && !feof(fp_); ++lineNumber) {
+ 		char temp[2048];
+ 		char *tempLine = fgets(temp, sizeof(temp), fp_);
+ 		if (!tempLine)
+@@ -115,6 +115,18 @@ void CheatFileParser::AddError(const std::string &err, int lineNumber) {
+ 	errors_.push_back(StringFromFormat("Error on line %d: %s", lineNumber, err.c_str()));
+ }
+ 
++static bool IsForce30Name(std::string name) {
++	std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return (char)std::tolower(c); });
++	static const char * const tags[] = { "30 fps", "30fps", "30 hz", "30hz" };
++	for (const char *tag : tags) {
++		size_t pos = name.find(tag);
++		// Skip "130 FPS" and the like.
++		if (pos != std::string::npos && (pos == 0 || !std::isdigit((unsigned char)name[pos - 1])))
++			return true;
++	}
++	return false;
++}
++
+ void CheatFileParser::ParseLine(const std::string &line, int lineNumber) {
+ 	switch (line[1]) {
+ 	case 'S':
+@@ -122,12 +134,23 @@ void CheatFileParser::ParseLine(const std::string &line, int lineNumber) {
+ 		Flush();
+ 		++games_;
+ 
++		if (db30_) {
++			// cheat.db: only the first exact match counts, then stop reading.
++			if (gameEnabled_ && games_ > 1) {
++				done_ = true;
++				return;
++			}
++			gameEnabled_ = ValidateGameID(line.substr(2));
++			return;
++		}
++
+ 		if (ValidateGameID(line.substr(2))) {
+ 			if (gameRiskyEnabled_) {
+ 				// We found the right one, so let's not use this risky stuff.
+ 				cheats_.clear();
+ 				cheatInfo_.clear();
+ 				gameRiskyEnabled_ = false;
++				force30Found_ = false;
+ 			}
+ 			gameEnabled_ = true;
+ 		} else if (games_ == 1) {
+@@ -141,6 +164,7 @@ void CheatFileParser::ParseLine(const std::string &line, int lineNumber) {
+ 				cheats_.clear();
+ 				cheatInfo_.clear();
+ 				gameRiskyEnabled_ = false;
++				force30Found_ = false;
+ 			}
+ 			gameEnabled_ = false;
+ 		}
+@@ -165,6 +189,15 @@ void CheatFileParser::ParseLine(const std::string &line, int lineNumber) {
+ 			cheatEnabled_ = false;
+ 			return;
+ 		}
++		if (force30_) {
++			if (gameEnabled_ && !force30Found_ && IsForce30Name(lastCheatInfo_.name)) {
++				// Runs it without touching the _C0 in the file.
++				cheatEnabled_ = true;
++				force30Found_ = true;
++			} else if (only30_) {
++				cheatEnabled_ = false;
++			}
++		}
+ 		return;
+ 
+ 	case 'L':
+@@ -209,6 +242,10 @@ bool CheatFileParser::ValidateGameID(std::string_view gameID) {
+ 	return validGameID_.empty() || ReplaceAll(TrimString(gameID), "-", "") == validGameID_;
+ }
+ 
++// Settings the cheat list was last parsed with.
++static bool parsedForce30 = false;
++static bool parsedUserCheats = false;
++
+ static void __CheatStop() {
+ 	if (cheatEngine) {
+ 		delete cheatEngine;
+@@ -229,6 +266,8 @@ static void __CheatStart() {
+ 
+ 	cheatEngine->ParseCheats();
+ 	g_Config.bReloadCheats = false;
++	parsedForce30 = g_Config.bForce30FPS;
++	parsedUserCheats = g_Config.bEnableCheats;
+ 	cheatsEnabled = true;
+ }
+ 
+@@ -251,7 +290,7 @@ void __CheatInit() {
+ 	// Always register the event, want savestates to be compatible whether cheats on or off.
+ 	CheatEvent = CoreTiming::RegisterEvent("CheatEvent", &hleCheat);
+ 
+-	if (g_Config.bEnableCheats) {
++	if (g_Config.bEnableCheats || g_Config.bForce30FPS) {
+ 		__CheatStart();
+ 	}
+ 
+@@ -283,7 +322,7 @@ void __CheatDoState(PointerWrap &p) {
+ }
+ 
+ void hleCheat(u64 userdata, int cyclesLate) {
+-	bool shouldBeEnabled = !Achievements::HardcoreModeActive() && g_Config.bEnableCheats;
++	bool shouldBeEnabled = !Achievements::HardcoreModeActive() && (g_Config.bEnableCheats || g_Config.bForce30FPS);
+ 
+ 	if (cheatsEnabled != shouldBeEnabled) {
+ 		// Okay, let's move to the desired state, then.
+@@ -322,8 +361,11 @@ void hleCheat(u64 userdata, int cyclesLate) {
+ 	if (!cheatEngine || !cheatsEnabled)
+ 		return;
+ 
+-	if (g_Config.bReloadCheats) {  // Checks if the "reload cheats" button has been pressed.
++	// Reload on the "reload cheats" button, or when either setting was toggled in-game.
++	if (g_Config.bReloadCheats || parsedForce30 != g_Config.bForce30FPS || parsedUserCheats != g_Config.bEnableCheats) {
+ 		cheatEngine->ParseCheats();
++		parsedForce30 = g_Config.bForce30FPS;
++		parsedUserCheats = g_Config.bEnableCheats;
+ 		g_Config.bReloadCheats = false;
+ 	}
+ 	cheatEngine->Run();
+@@ -351,6 +393,11 @@ void CWCheatEngine::CreateCheatFile() {
+ 
+ void CWCheatEngine::ParseCheats() {
+ 	CheatFileParser parser(filename_, gameID_);
++	const bool force30 = g_Config.bForce30FPS;
++	if (force30) {
++		// With cheats off, the 30 FPS cheat is the only one allowed to run.
++		parser.SetForce30(!g_Config.bEnableCheats, false);
++	}
+ 
+ 	parser.Parse();
+ 	// TODO: Report errors in a user-visible way.
+@@ -359,6 +406,14 @@ void CWCheatEngine::ParseCheats() {
+ 	}
+ 
+ 	cheats_ = parser.GetCheats();
++
++	if (force30 && !gameID_.empty() && !parser.Force30Found()) {
++		// Not in the game's own ini: take it straight from cheat.db, nothing is written.
++		CheatFileParser db(GetSysDirectory(DIRECTORY_CHEATS) / "cheat.db", gameID_);
++		db.SetForce30(true, true);
++		db.Parse();
++		cheats_.insert(cheats_.end(), db.GetCheats().begin(), db.GetCheats().end());
++	}
+ }
+ 
+ std::vector<CheatFileInfo> CWCheatEngine::FileInfo() const {
+diff --git a/Core/CwCheat.h b/Core/CwCheat.h
+index 3f8c22a..651a64e 100644
+--- a/Core/CwCheat.h
++++ b/Core/CwCheat.h
+@@ -92,6 +92,11 @@ class CheatFileParser {
+ 	const std::vector<CheatCode> &GetCheats() const { return cheats_; }
+ 	const std::vector<CheatFileInfo> &GetFileInfo() const { return cheatInfo_; }
+ 
++	// Force 30 FPS: enable the first cheat named like "30 FPS" / "30Hz" for this game.
++	// only: ignore every other cheat. db: multi-game file (cheat.db), exact ID match only.
++	void SetForce30(bool only, bool db) { force30_ = true; only30_ = only; db30_ = db; }
++	bool Force30Found() const { return force30Found_; }
++
+ protected:
+ 	void Flush();
+ 	void FlushCheatInfo();
+@@ -112,4 +117,9 @@ class CheatFileParser {
+ 	bool gameEnabled_ = true;
+ 	bool gameRiskyEnabled_ = false;
+ 	bool cheatEnabled_ = false;
++	bool force30_ = false;
++	bool only30_ = false;
++	bool db30_ = false;
++	bool force30Found_ = false;
++	bool done_ = false;
+ };
+diff --git a/Core/HLE/sceDisplay.cpp b/Core/HLE/sceDisplay.cpp
+index 9cc9bc7..e34c939 100644
+--- a/Core/HLE/sceDisplay.cpp
++++ b/Core/HLE/sceDisplay.cpp
+@@ -888,11 +888,12 @@ int sceDisplaySetFramebuf(u32 topaddr, int linesize, int pixelformat, int sync)
+ 	hleEatCycles(290);
+ 
+ 	s64 delayCycles = 0;
++	const bool force30 = g_Config.bForce30FPS;
+ 	// Don't count transitions between display off and display on.
+ 	if (topaddr != 0 &&
+ 		(topaddr != framebuf.topaddr || PSP_CoreParameter().compat.flags().SplitFramebufferMargin) &&
+ 		framebuf.topaddr != 0 &&
+-		PSP_CoreParameter().compat.flags().ForceMax60FPS) {
++		(PSP_CoreParameter().compat.flags().ForceMax60FPS || force30)) {
+ 		// sceDisplaySetFramebuf() isn't supposed to delay threads at all.  This is a hack.
+ 		// So let's only delay when it's more than 1ms.
+ 		const s64 FLIP_DELAY_CYCLES_MIN = usToCycles(1000);
+@@ -916,9 +917,14 @@ int sceDisplaySetFramebuf(u32 topaddr, int linesize, int pixelformat, int sync)
+ 		}
+ 
+ 		// 1001 to account for NTSC timing (59.94 fps.)
+-		u64 expected = msToCycles(1001) / framerate - LEEWAY_CYCLES_PER_FLIP;
++		u64 expected = msToCycles(1001) / (force30 ? 30 : framerate) - LEEWAY_CYCLES_PER_FLIP;
+ 		lastFlipCycles = now;
+-		nextFlipCycles = std::max(lastFlipCycles, nextFlipCycles) + expected;
++		if (force30 && lastFlipsTooFrequent < FLIP_DELAY_MIN_FLIPS) {
++			// Not delaying yet: don't bank up a debt, or the first delay is a long hitch.
++			nextFlipCycles = lastFlipCycles + expected;
++		} else {
++			nextFlipCycles = std::max(lastFlipCycles, nextFlipCycles) + expected;
++		}
+ 	}
+ 
+ 	__DisplaySetFramebuf(topaddr, linesize, pixelformat, sync);
+diff --git a/UI/GameSettingsScreen.cpp b/UI/GameSettingsScreen.cpp
+index cf9eaff..0818eda 100644
+--- a/UI/GameSettingsScreen.cpp
++++ b/UI/GameSettingsScreen.cpp
+@@ -463,6 +463,8 @@ void GameSettingsScreen::CreateGraphicsSettings(UI::ViewGroup *graphicsSettings)
+ 		g_Config.UpdateAfterSettingAutoFrameSkip();
+ 	});
+ 
++	graphicsSettings->Add(new CheckBox(&g_Config.bForce30FPS, gr->T("Force 30 FPS")));
++
+ 	PopupSliderChoice *altSpeed1 = graphicsSettings->Add(new PopupSliderChoice(&iAlternateSpeedPercent1_, 0, 1000, UI::NO_DEFAULT_INT, gr->T("Alternative Speed", "Alternative speed"), 5, screenManager(), gr->T("%, 0:unlimited")));
+ 	altSpeed1->SetFormat("%i%%");
+ 	altSpeed1->SetZeroLabel(gr->T("Unlimited"));
