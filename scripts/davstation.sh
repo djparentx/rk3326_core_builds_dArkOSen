@@ -104,7 +104,7 @@ cmake --build build --parallel --target davstation
 mkdir -p "$OUT/bin/lib"
 cp -a build/bin/davstation "$OUT/bin/"
 cp -a build/bin/resources "$OUT/bin/"
-# llvm-strip-$CLANG_VER "$OUT/bin/davstation"
+llvm-strip-$CLANG_VER "$OUT/bin/davstation"
 
 # Bundle shared libs from the deps folder that the binary needs (SDL3 excluded: the device uses the patched system one)
 DEPLIB="$DEPS/lib"
