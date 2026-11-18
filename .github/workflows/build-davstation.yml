@@ -1,0 +1,65 @@
+name: Build DavStation (native arm64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      davstation_ref:
+        description: "DavStation branch, tag or commit"
+        required: false
+        default: "main"
+
+jobs:
+  build-davstation-arm64:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:trixie
+    timeout-minutes: 240
+    steps:
+      - name: Install build tools and system libraries
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential git curl ca-certificates unzip perl python3 file \
+            cmake ninja-build pkg-config patchelf \
+            clang-19 lld-19 llvm-19 \
+            zlib1g-dev libzstd-dev libpng-dev libjpeg-dev libwebp-dev libfreetype-dev \
+            libcurl4-openssl-dev libudev-dev libdrm-dev libgbm-dev libegl-dev libgles-dev libasound2-dev
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set safe directory
+        shell: bash
+        run: git config --global --add safe.directory "*"
+
+      - name: Clone DavStation
+        shell: bash
+        run: |
+          git clone https://github.com/djparentx/DavStation.git davstation-src
+          git -C davstation-src fetch -q origin "${{ github.event.inputs.davstation_ref }}"
+          git -C davstation-src checkout -q FETCH_HEAD
+
+      - name: Restore dependency cache
+        uses: actions/cache@v4
+        with:
+          path: davstation-deps
+          key: davstation-deps-trixie-arm64-${{ hashFiles('davstation-src/scripts/deps/build-dependencies-linux.sh') }}-sdl3-release-3.4.16
+
+      - name: Build DavStation
+        shell: bash
+        env:
+          DAV_REF: ${{ github.event.inputs.davstation_ref }}
+        run: |
+          chmod +x scripts/davstation.sh davstation-src/scripts/deps/build-dependencies-linux.sh
+          ./scripts/davstation.sh
+
+      - name: Upload DavStation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: davstation-arm64
+          if-no-files-found: warn
+          path: |
+            davstation-64/davstation_pkg.tar.gz
+            davstation-64/build-info.txt
