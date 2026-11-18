@@ -24,7 +24,7 @@ jobs:
             cmake ninja-build pkg-config patchelf \
             clang-19 lld-19 llvm-19 \
             zlib1g-dev libzstd-dev libpng-dev libjpeg-dev libwebp-dev libfreetype-dev \
-            libcurl4-openssl-dev libudev-dev libdrm-dev libgbm-dev libegl-dev libgles-dev libasound2-dev
+            libcurl4-openssl-dev libudev-dev libdrm-dev libgbm-dev libegl-dev libgles-dev libasound2-dev libdbus-1-dev
 
       - name: Checkout
         uses: actions/checkout@v4
