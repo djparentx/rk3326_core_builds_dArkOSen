@@ -75,7 +75,7 @@ fi
 
 # Configure and build
 cd "$SRC"
-TUNE_FLAGS="-march=armv8-a+crc -mtune=cortex-a35"
+TUNE_FLAGS="-mcpu=cortex-a35+nocrypto"
 cmake -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=clang-$CLANG_VER \
