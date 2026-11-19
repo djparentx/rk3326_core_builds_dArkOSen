@@ -1,0 +1,20 @@
+diff --git a/src/video/kmsdrm/SDL_kmsdrmopengles.c b/src/video/kmsdrm/SDL_kmsdrmopengles.c
+index 4edde28..e2cc568 100644
+--- a/src/video/kmsdrm/SDL_kmsdrmopengles.c
++++ b/src/video/kmsdrm/SDL_kmsdrmopengles.c
+@@ -127,6 +127,15 @@ static bool KMSDRM_GLES_SwapWindowFenced(SDL_VideoDevice *_this, SDL_Window * wi
+ 
+     if (modesetting) {
+         KMSDRM_CreateSurfaces(_this, window);
++    } else if (_this->egl_data->egl_swapinterval == 0 && dispdata->kms_fence) {
++        /* Swap interval 0: if the previous pageflip is still pending, drop
++           this frame instead of blocking in drm_atomic_waitpending(). The
++           app renders the next frame into the same back buffer. */
++        const EGLint status = _this->egl_data->eglClientWaitSyncKHR(_this->egl_data->egl_display,
++            dispdata->kms_fence, 0, 0);
++        if (status == EGL_TIMEOUT_EXPIRED_KHR) {
++            return true;
++        }
+     }
+ 
+     SDL_zero(info);
