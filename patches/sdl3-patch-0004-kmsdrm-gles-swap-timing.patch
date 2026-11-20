@@ -1,8 +1,9 @@
 diff --git a/src/video/kmsdrm/SDL_kmsdrmopengles.c b/src/video/kmsdrm/SDL_kmsdrmopengles.c
-index 4edde28..3f6e0c4 100644
+index 4edde28..d52db3a 100644
 --- a/src/video/kmsdrm/SDL_kmsdrmopengles.c
 +++ b/src/video/kmsdrm/SDL_kmsdrmopengles.c
 @@ -117,20 +117,68 @@ static EGLSyncKHR create_fence(SDL_VideoDevice *_this, int fd)
+ /* program exits immediately, or we could leave KMS waiting for a failed/missing   */
  /* fence forever.                                                                  */
  /***********************************************************************************/
 +/* Swap timing (debug only). Set SDL_KMSDRM_SWAP_TIMING=<log file path> to
