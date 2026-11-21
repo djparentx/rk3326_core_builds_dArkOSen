@@ -1,4 +1,4 @@
-name: Build DavCast
+name: Build Davcast (arm64)
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
           restore-keys: |
             davcast-ccache-
 
-      - name: Build DavCast in aarch64 Debian Trixie container
+      - name: Build Davcast in aarch64 Debian Trixie container
         run: |
           mkdir -p ${{ github.workspace }}/.ccache
           docker run --rm --platform linux/arm64 \
