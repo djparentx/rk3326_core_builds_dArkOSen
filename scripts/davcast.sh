@@ -58,6 +58,8 @@ BRANCH="main"
 
 	  printf '%s\n' '' 'if(FLYCAST_LINK_MALI_SHIMS)' '  target_sources(${PROJECT_NAME} PRIVATE gbm_shim.c wayland_egl_shim.c)' '  target_link_libraries(${PROJECT_NAME} PRIVATE gbm)' 'endif()' >> CMakeLists.txt
 
+	  sed -i 's/LINK_FLAGS_RELEASE -s)/LINK_FLAGS_RELEASE "")/' CMakeLists.txt
+
 	  cd $cur_wd
 	  rm -rf davcast-build
 	  mkdir davcast-build
