@@ -35,8 +35,10 @@ jobs:
 
       - name: Clone DavStation
         shell: bash
+        env:
+          DAVSTATION_TOKEN: ${{ secrets.DAVSTATION_TOKEN }}
         run: |
-          git clone https://github.com/djparentx/DavStation.git davstation-src
+          git clone "https://x-access-token:${DAVSTATION_TOKEN}@github.com/djparentx/DavStation.git" davstation-src
           git -C davstation-src fetch -q origin "${{ github.event.inputs.davstation_ref }}"
           git -C davstation-src checkout -q FETCH_HEAD
 
