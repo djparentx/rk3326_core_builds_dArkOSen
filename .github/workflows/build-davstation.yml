@@ -9,7 +9,32 @@ on:
         default: "main"
 
 jobs:
+  build-openbios:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Build OpenBIOS
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends make g++-mipsel-linux-gnu
+          git clone --depth 1 https://github.com/pcsx-redux/nugget.git
+          make -C nugget/openbios PREFIX=mipsel-linux-gnu
+          mkdir -p openbios-out
+          cp nugget/openbios/openbios.bin openbios-out/
+          cp "$(find nugget -maxdepth 1 -iname 'license*' | head -1)" openbios-out/LICENSE.openbios
+          size=$(stat -c %s openbios-out/openbios.bin)
+          [ "$size" -le 524288 ] || { echo "openbios.bin is larger than 512 KB ($size bytes)"; exit 1; }
+          truncate -s 524288 openbios-out/openbios.bin
+          echo "nugget commit: $(git -C nugget rev-parse HEAD)" | tee openbios-out/openbios-info.txt
+
+      - name: Upload OpenBIOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: openbios
+          path: openbios-out/
   build-davstation-arm64:
+    needs: build-openbios
     runs-on: ubuntu-24.04-arm
     container:
       image: debian:trixie
@@ -28,6 +53,12 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download OpenBIOS
+        uses: actions/download-artifact@v4
+        with:
+          name: openbios
+          path: openbios
 
       - name: Set safe directory
         shell: bash
