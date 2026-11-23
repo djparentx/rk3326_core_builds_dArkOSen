@@ -19,10 +19,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends make g++-mipsel-linux-gnu
           git clone --depth 1 https://github.com/pcsx-redux/nugget.git
-          mkdir -p "$HOME/mipswrap"
-          printf '%s\n' '#!/bin/bash' 'args=()' 'for a in "$@"; do [ "$a" = "elf32-littlemips" ] && a="elf32-tradlittlemips"; args+=("$a"); done' 'exec /usr/bin/mipsel-linux-gnu-objcopy "${args[@]}"' > "$HOME/mipswrap/mipsel-linux-gnu-objcopy"
           chmod +x "$HOME/mipswrap/mipsel-linux-gnu-objcopy"
-          PATH="$HOME/mipswrap:$PATH" make -C nugget/openbios PREFIX=mipsel-linux-gnu
+          make -C nugget/openbios PREFIX=mipsel-linux-gnu FORMAT=elf32-tradlittlemips
           mkdir -p openbios-out
           cp nugget/openbios/openbios.bin openbios-out/
           cp "$(find nugget -maxdepth 1 -iname 'license*' | head -1)" openbios-out/LICENSE.openbios
