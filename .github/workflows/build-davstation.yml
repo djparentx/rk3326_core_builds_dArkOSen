@@ -19,7 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends make g++-mipsel-linux-gnu
           git clone --depth 1 https://github.com/pcsx-redux/nugget.git
-          chmod +x "$HOME/mipswrap/mipsel-linux-gnu-objcopy"
           make -C nugget/openbios PREFIX=mipsel-linux-gnu FORMAT=elf32-tradlittlemips
           mkdir -p openbios-out
           cp nugget/openbios/openbios.bin openbios-out/
