@@ -8,7 +8,7 @@
 
 cur_wd="$PWD"
 bitness="$(getconf LONG_BIT)"
-BRANCH="main"
+BRANCH="${DAVCAST_BRANCH:-main}"
 
 	# davcast build
 	if [[ "$var" == "davcast" ]] && [[ "$bitness" == "64" ]]; then
