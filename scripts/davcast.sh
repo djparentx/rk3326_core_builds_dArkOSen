@@ -44,6 +44,7 @@ BRANCH="main"
 	  fi
 
 	  rm -f flycastsa-patch-004-link-mali-shims.patch
+	  rm -f flycastsa27-patch-008-vulkan-rotate.patch
 
 	  for patching in flycastsa-patch* flycastsa27-patch*
 	  do
