@@ -1,0 +1,54 @@
+name: Build DavPSP (arm64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-davpsp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: davpsp-ccache-${{ hashFiles('scripts/davpsp.sh') }}
+          restore-keys: |
+            davpsp-ccache-
+
+      - name: Build DavPSP in aarch64 Debian Trixie container
+        run: |
+          mkdir -p ${{ github.workspace }}/.ccache
+          docker run --rm --platform linux/arm64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e CCACHE_DIR=/workspace/.ccache \
+            -e DAVPSP_TOKEN=${{ secrets.DAVPSP_TOKEN }} \
+            debian:trixie \
+            bash -c "
+              set -e
+              apt-get update
+              apt-get install -y build-essential git cmake pkg-config clang ccache \
+                libsdl2-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+                libx11-dev libsm-dev libxext-dev libudev-dev libasound2-dev \
+                libfreetype6-dev mercurial zlib1g-dev
+              ccache --max-size=2G
+              ./builds.sh davpsp
+              ccache --show-stats
+            "
+
+      - name: Upload built DavPSP binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: davpsp
+          if-no-files-found: error
+          path: |
+            davpsp64/davpsp
+            davpsp64/davpsp_pkg_*.tar.gz
