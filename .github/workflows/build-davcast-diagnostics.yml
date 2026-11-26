@@ -31,6 +31,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             -e CCACHE_DIR=/workspace/.ccache \
+            -e DAVCAST_TOKEN=${{ secrets.DAVCAST_TOKEN }} \
             -e DAVCAST_BRANCH=diagnostics \
             debian:trixie \
             bash -c "

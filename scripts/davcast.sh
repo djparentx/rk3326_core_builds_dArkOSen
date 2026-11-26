@@ -21,7 +21,7 @@ BRANCH="${DAVCAST_BRANCH:-main}"
 
 	  cd $cur_wd
 	  if [ ! -d "davcast-src/" ]; then
-		git clone --depth 1 --branch ${BRANCH} https://github.com/djparentx/Davcast.git davcast-src
+		git clone --depth 1 --branch ${BRANCH} "https://${DAVCAST_TOKEN:+x-access-token:${DAVCAST_TOKEN}@}github.com/djparentx/Davcast.git" davcast-src
 		if [[ $? != "0" ]]; then
 		  echo " "
 		  echo "There was an error while cloning the davcast git.  Stopping here."
